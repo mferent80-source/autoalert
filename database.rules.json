@@ -63,7 +63,10 @@
                 "lastKm": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 999999" },
                 "intervalKm": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500000" },
                 "warnKmBefore": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 50000" },
-                "warnDaysBefore": { ".validate": "!newData.exists() || newData.hasChildren()" },
+                "warnDaysBefore": {
+                  ".validate": "!newData.exists() || newData.hasChildren()",
+                  "$i": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 365" }
+                },
                 "notes": { ".validate": "newData.isString() && newData.val().length <= 500" },
                 "cost": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000" },
                 "createdAt": { ".validate": "newData.isNumber()" },
@@ -80,7 +83,9 @@
                 "doneKm": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 999999" },
                 "cost": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000" },
                 "notes": { ".validate": "newData.isString() && newData.val().length <= 500" },
-                "doneBy": { ".validate": "newData.isString()" }
+                "doneBy": { ".validate": "newData.isString()" },
+                "serviceId": { ".validate": "newData.isString()" },
+                "createdAt": { ".validate": "newData.isNumber()" }
               }
             }
           }

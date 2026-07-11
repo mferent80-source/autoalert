@@ -334,13 +334,15 @@
     const nested = /\/services\//.test(path) || /\/history\//.test(path);
     payload.updatedAt = Date.now();
     if (!nested) payload.updatedBy = _user.uid;
-    await update(ref(_db, 'families/' + _state.familyId + '/' + path), payload);
+    const clean = AA.cleanRtdb ? AA.cleanRtdb(payload) : payload;
+    await update(ref(_db, 'families/' + _state.familyId + '/' + path), clean);
   };
 
   AA.fb.set = async function (path, data) {
     if (!_user || !_state.familyId) throw new Error('Fără familie');
     const { ref, set } = AA.fb._api;
-    await set(ref(_db, 'families/' + _state.familyId + '/' + path), data);
+    const clean = AA.cleanRtdb ? AA.cleanRtdb(data) : data;
+    await set(ref(_db, 'families/' + _state.familyId + '/' + path), clean);
   };
 
   AA.fb.remove = async function (path) {

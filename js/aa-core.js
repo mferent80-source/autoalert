@@ -3,7 +3,7 @@
   'use strict';
 
   const AA = global.AA || {};
-  AA.APP_VERSION = '1.3.0';
+  AA.APP_VERSION = '1.3.1';
 
   AA.LS = {
     morningNotif: 'aa_morning_notif',
@@ -88,6 +88,20 @@
       if ((AA.STATUS_ORDER[s] ?? 3) < (AA.STATUS_ORDER[worst] ?? 3)) worst = s;
     }
     return worst;
+  };
+
+  AA.cleanRtdb = function (obj) {
+    if (obj == null || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) {
+      const arr = obj.map(AA.cleanRtdb).filter(function (v) { return v !== undefined; });
+      return arr.length ? arr : undefined;
+    }
+    const out = {};
+    Object.keys(obj).forEach(function (k) {
+      const v = AA.cleanRtdb(obj[k]);
+      if (v !== undefined) out[k] = v;
+    });
+    return Object.keys(out).length ? out : undefined;
   };
 
   AA.escapeHtml = function (str) {

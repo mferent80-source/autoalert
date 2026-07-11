@@ -154,8 +154,6 @@
     const svc = {
       type: type,
       mode: meta.mode,
-      warnDaysBefore: meta.warnDaysBefore ? meta.warnDaysBefore.slice() : undefined,
-      warnKmBefore: meta.warnKmBefore,
       lastDate: today,
       notes: '',
       cost: 0,
@@ -179,8 +177,9 @@
     if (meta.mode === 'mileage' || meta.mode === 'both') {
       svc.lastKm = 0;
       svc.intervalKm = meta.defaultIntervalKm || 10000;
+      if (meta.warnKmBefore != null) svc.warnKmBefore = meta.warnKmBefore;
     }
-    return svc;
+    return AA.cleanRtdb ? AA.cleanRtdb(svc) : svc;
   };
 
   global.AA = AA;

@@ -745,7 +745,15 @@ body::before {
 .modal-actions { display: flex; gap: 8px; margin-top: 8px; }
 .modal-actions .btn { flex: 1; }
 
-.pick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.pick-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+  max-height: 52vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
 .pick-btn {
   display: flex;
   align-items: center;
@@ -763,6 +771,7 @@ body::before {
 }
 .pick-btn .aa-icon { flex-shrink: 0; color: var(--accent); }
 .pick-btn:hover { border-color: var(--accent); background: rgba(249,115,22,.06); }
+.pick-btn:disabled, .pick-btn-loading { opacity: 0.55; cursor: wait; }
 
 #toastContainer {
   position: fixed;

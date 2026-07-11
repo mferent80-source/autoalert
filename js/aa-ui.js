@@ -537,10 +537,11 @@
     if (m.type === 'pick-service') {
       const opts = Object.keys(AA.SERVICE_TYPES).map(function (k) {
         const t = AA.SERVICE_TYPES[k];
-        return '<button class="pick-btn" data-type="' + k + '">' + AA.ui._svcBubble(k, 36) + '<span>' + t.label + '</span></button>';
+        return '<button type="button" class="pick-btn" data-svc-type="' + k + '">' +
+          AA.ui._svcBubble(k, 36) + '<span>' + t.label + '</span></button>';
       }).join('');
       return '<div class="modal-overlay" id="modalOverlay"><div class="modal modal-lg">' +
-        '<h3>Alege tip serviciu</h3><div class="pick-grid">' + opts + '</div>' +
+        '<h3>Alege tip serviciu</h3><div class="pick-grid" id="pickServiceGrid">' + opts + '</div>' +
         '<button class="btn btn-ghost" id="modalCancel">Anulează</button></div></div>';
     }
     return '';
@@ -763,14 +764,21 @@
     if (overlay) overlay.onclick = function (e) { if (e.target === overlay) AA.ui.closeModal(); };
 
     if (_modal.type === 'pick-service') {
-      document.querySelectorAll('[data-type]').forEach(function (b) {
+      document.querySelectorAll('#pickServiceGrid [data-svc-type]').forEach(function (b) {
         b.onclick = async function () {
+          if (b.disabled) return;
+          const type = b.dataset.svcType;
+          const meta = AA.SERVICE_TYPES[type] || { label: type };
+          b.disabled = true;
+          b.classList.add('pick-btn-loading');
           try {
-            const r = await AA.cars.addService(_selectedCarId, b.dataset.type);
-            AA.showToast('Adăugat — completează datele', 'success');
-            AA.ui.openModal('service', r.svc, true, { sid: r.sid });
+            await AA.cars.addService(_selectedCarId, type);
+            AA.showToast(meta.label + ' adăugat', 'success');
+            AA.ui.closeModal();
           } catch (e) {
-            AA.showToast((AA.fb._rtdbErr ? AA.fb._rtdbErr(e) : e.message), 'error');
+            AA.showToast((e && e.message) || 'Eroare la adăugare', 'error');
+            b.disabled = false;
+            b.classList.remove('pick-btn-loading');
           }
         };
       });

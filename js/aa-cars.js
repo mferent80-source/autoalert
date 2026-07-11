@@ -60,18 +60,22 @@
   };
 
   AA.cars.addService = async function (carId, type) {
+    const meta = AA.SERVICE_TYPES[type];
+    if (!meta) throw new Error('Tip serviciu invalid: ' + type);
     const svc = AA.defaultService(type);
-    if (!svc) throw new Error('Tip serviciu invalid');
+    if (!svc) throw new Error('Tip serviciu invalid: ' + type);
     const sid = AA.genId();
     const state = AA.fb.getState();
     const car = state.cars[carId];
-    if (car && car.currentKm != null && (svc.mode === 'mileage' || svc.mode === 'both')) {
+    if (!car) throw new Error('Mașină negăsită');
+    if (car.currentKm != null && (svc.mode === 'mileage' || svc.mode === 'both')) {
       svc.lastKm = car.currentKm;
     }
     try {
       await AA.fb.set('cars/' + carId + '/services/' + sid, svc);
     } catch (e) {
-      throw new Error(AA.fb._rtdbErr ? AA.fb._rtdbErr(e) : e.message);
+      const err = AA.fb._rtdbErr ? AA.fb._rtdbErr(e) : ((e && e.message) || 'Eroare Firebase');
+      throw new Error(meta.label + ': ' + err);
     }
     return { sid: sid, svc: svc };
   };
