@@ -15,8 +15,8 @@
     const id = AA.genId();
     const car = {
       plate: AA.formatPlate(data.plate).slice(0, 10),
-      brand: String(data.brand || '').trim().slice(0, 60),
-      model: String(data.model || '').trim().slice(0, 60),
+      brand: AA.formatCarField(data.brand).slice(0, 60),
+      model: AA.formatCarField(data.model).slice(0, 60),
       year: Number(data.year) || new Date().getFullYear(),
       currentKm: Math.max(0, Math.min(999999, Number(data.currentKm) || 0)),
       currentKmUpdatedAt: Date.now(),
@@ -34,8 +34,8 @@
   AA.cars.update = async function (carId, patch) {
     const allowed = {};
     if (patch.plate != null) allowed.plate = AA.formatPlate(patch.plate).slice(0, 10);
-    if (patch.brand != null) allowed.brand = String(patch.brand).trim().slice(0, 60);
-    if (patch.model != null) allowed.model = String(patch.model).trim().slice(0, 60);
+    if (patch.brand != null) allowed.brand = AA.formatCarField(patch.brand).slice(0, 60);
+    if (patch.model != null) allowed.model = AA.formatCarField(patch.model).slice(0, 60);
     if (patch.year != null) allowed.year = Number(patch.year);
     if (patch.color != null) allowed.color = String(patch.color).slice(0, 20);
     await AA.fb.updateFamilyData('cars/' + carId, allowed);

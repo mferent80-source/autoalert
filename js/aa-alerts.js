@@ -136,7 +136,7 @@
             carId: carId,
             serviceId: sid,
             plate: AA.formatPlate(car.plate),
-            carLabel: (car.brand || '') + ' ' + (car.model || ''),
+            carLabel: AA.formatCarLabel(car.brand, car.model, ''),
             status: st,
             summary: d.summary,
             label: d.label,

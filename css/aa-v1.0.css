@@ -311,6 +311,8 @@ body::before {
   text-transform: uppercase;
 }
 .input-plate { text-transform: uppercase; letter-spacing: 0.08em; }
+.input-upper { text-transform: uppercase; }
+.car-name { text-transform: uppercase; letter-spacing: 0.03em; }
 
 .input, select.input {
   width: 100%;
@@ -821,7 +823,15 @@ body::before {
 }
 .car-hero-thumb .aa-icon { color: inherit; }
 .car-hero .plate-chip-lg { position: relative; z-index: 1; }
-.car-hero-sub { color: var(--txt2); font-size: 14px; margin-top: 8px; position: relative; z-index: 1; }
+.car-hero-sub {
+  color: var(--txt2);
+  font-size: 14px;
+  margin-top: 8px;
+  position: relative;
+  z-index: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
 
 .km-box {
   background: linear-gradient(145deg, var(--bg1), var(--bg2));

@@ -109,7 +109,7 @@
       AA.ui._svcIcon('car', 22) + '</div>' +
       '<div class="car-card-id">' +
       '<span class="plate-chip mono' + (isAlert && worst === 'expired' ? ' plate-chip-alert' : '') + '">' + AA.escapeHtml(AA.formatPlate(car.plate)) + '</span>' +
-      '<span class="car-name">' + AA.escapeHtml((car.brand || '') + ' ' + (car.model || '')) + '</span>' +
+      '<span class="car-name">' + AA.escapeHtml(AA.formatCarLabel(car.brand, car.model, '')) + '</span>' +
       '</div>' +
       '<span class="badge badge-' + worst + '">' + AA.STATUS_LABELS[worst] + '</span>' +
       '</div>' +
@@ -265,6 +265,19 @@
   AA.ui._carColor = function (car) {
     if (car && car.color) return car.color;
     return '#fb923c';
+  };
+
+  AA.ui._bindUpperInput = function (id, formatter) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.oninput = function () {
+      const pos = el.selectionStart;
+      const up = formatter(el.value);
+      if (el.value !== up) {
+        el.value = up;
+        el.setSelectionRange(pos, pos);
+      }
+    };
   };
 
   AA.ui._svcIcon = function (type, size) {
@@ -492,7 +505,7 @@
         AA.ui._svcIcon('car', 18) + '</div>' +
         '<div class="list-card-info">' +
         '<div class="plate-chip mono' + (isAlert && worst === 'expired' ? ' plate-chip-alert' : '') + '">' + AA.escapeHtml(AA.formatPlate(car.plate)) + '</div>' +
-        '<div class="list-sub">' + AA.escapeHtml((car.brand || '') + ' ' + (car.model || '')) +
+        '<div class="list-sub">' + AA.escapeHtml(AA.formatCarLabel(car.brand, car.model, '')) +
         ' · ' + AA.formatKm(car.currentKm) +
         (isAlert ? ' · <span class="list-alert-count">' + AA.escapeHtml(AA.ui._alertCountLabel(counts)) + '</span>' : '') +
         '</div></div>' +
@@ -544,7 +557,7 @@
       '<div class="car-hero-glow"></div>' +
       '<div class="car-hero-thumb">' + AA.ui._svcIcon('car', 36) + '</div>' +
       '<div class="plate-chip plate-chip-lg mono">' + AA.escapeHtml(AA.formatPlate(car.plate)) + '</div>' +
-      '<div class="car-hero-sub">' + AA.escapeHtml((car.brand || '') + ' ' + (car.model || '') + ' · ' + (car.year || '')) + '</div>' +
+      '<div class="car-hero-sub">' + AA.escapeHtml(AA.formatCarLabel(car.brand, car.model, car.year)) + '</div>' +
       '</div>' +
       '<div class="km-box">' +
       '<label>Km curent</label>' +
@@ -625,8 +638,8 @@
       return '<div class="modal-overlay" id="modalOverlay"><div class="modal">' +
         '<h3>' + (m.edit ? 'Editează mașina' : 'Mașină nouă') + '</h3>' +
         '<input class="input mono input-plate" id="mPlate" placeholder="B 123 ABC" autocapitalize="characters" value="' + AA.escapeHtml(AA.formatPlate(c.plate || '')) + '">' +
-        '<input class="input" id="mBrand" placeholder="Marcă" value="' + AA.escapeHtml(c.brand || '') + '">' +
-        '<input class="input" id="mModel" placeholder="Model" value="' + AA.escapeHtml(c.model || '') + '">' +
+        '<input class="input input-upper" id="mBrand" placeholder="Marcă" autocapitalize="characters" value="' + AA.escapeHtml(AA.formatCarField(c.brand || '')) + '">' +
+        '<input class="input input-upper" id="mModel" placeholder="Model" autocapitalize="characters" value="' + AA.escapeHtml(AA.formatCarField(c.model || '')) + '">' +
         '<input class="input" id="mYear" type="number" placeholder="An" value="' + (c.year || new Date().getFullYear()) + '">' +
         '<input class="input mono" id="mKm" type="number" placeholder="Km curent" value="' + (c.currentKm || 0) + '">' +
         '<div class="modal-actions">' +
@@ -993,17 +1006,9 @@
       }
     };
 
-    const plateInput = document.getElementById('mPlate');
-    if (plateInput) {
-      plateInput.oninput = function () {
-        const pos = plateInput.selectionStart;
-        const up = AA.formatPlate(plateInput.value);
-        if (plateInput.value !== up) {
-          plateInput.value = up;
-          plateInput.setSelectionRange(pos, pos);
-        }
-      };
-    }
+    AA.ui._bindUpperInput('mPlate', AA.formatPlate);
+    AA.ui._bindUpperInput('mBrand', AA.formatCarField);
+    AA.ui._bindUpperInput('mModel', AA.formatCarField);
 
     const save = document.getElementById('modalSave');
     if (!save) return;

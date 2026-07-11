@@ -3,7 +3,7 @@
   'use strict';
 
   const AA = global.AA || {};
-  AA.APP_VERSION = '1.4.4';
+  AA.APP_VERSION = '1.4.5';
 
   AA.LS = {
     morningNotif: 'aa_morning_notif',
@@ -77,6 +77,19 @@
 
   AA.formatPlate = function (plate) {
     return String(plate || '').trim().toUpperCase();
+  };
+
+  AA.formatCarField = function (text) {
+    return String(text || '').trim().toUpperCase();
+  };
+
+  AA.formatCarLabel = function (brand, model, year) {
+    const b = AA.formatCarField(brand);
+    const m = AA.formatCarField(model);
+    const parts = [];
+    if (b || m) parts.push((b + ' ' + m).trim());
+    if (year) parts.push(String(year));
+    return parts.join(' · ');
   };
 
   AA.genId = function () {

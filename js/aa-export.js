@@ -59,7 +59,7 @@
 
       body += '<section class="car-block">' +
         '<h2>' + AA.escapeHtml(AA.formatPlate(car.plate) || '—') + '</h2>' +
-        '<p class="sub">' + AA.escapeHtml((car.brand || '') + ' ' + (car.model || '') + ' · ' + (car.year || '')) +
+        '<p class="sub">' + AA.escapeHtml(AA.formatCarLabel(car.brand, car.model, car.year)) +
         ' · Km: <span class="mono">' + AA.formatKm(car.currentKm) + '</span></p>' +
         '<table><thead><tr>' +
         '<th>Serviciu</th><th>Status</th><th>Detalii</th><th>Dată limită</th><th>Km țintă</th>' +
