@@ -3,7 +3,7 @@
   'use strict';
 
   const AA = global.AA || {};
-  AA.APP_VERSION = '1.4.3';
+  AA.APP_VERSION = '1.4.4';
 
   AA.LS = {
     morningNotif: 'aa_morning_notif',
@@ -73,6 +73,10 @@
   AA.formatKm = function (n) {
     if (n == null || isNaN(n)) return '—';
     return Number(n).toLocaleString('ro-RO') + ' km';
+  };
+
+  AA.formatPlate = function (plate) {
+    return String(plate || '').trim().toUpperCase();
   };
 
   AA.genId = function () {

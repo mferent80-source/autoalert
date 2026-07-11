@@ -300,6 +300,7 @@ body::before {
   font-weight: 700;
   font-size: 13px;
   letter-spacing: 0.1em;
+  text-transform: uppercase;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 2px 8px rgba(0,0,0,.35);
 }
 .plate-chip-lg {
@@ -307,7 +308,9 @@ body::before {
   padding: 8px 18px;
   border-radius: 8px;
   letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
+.input-plate { text-transform: uppercase; letter-spacing: 0.08em; }
 
 .input, select.input {
   width: 100%;

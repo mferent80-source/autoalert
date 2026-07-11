@@ -180,7 +180,7 @@
     let body = parts.join(' · ');
     if (agg.items.length) {
       const top = agg.items.slice(0, 3).map(function (i) {
-        return i.plate + ': ' + i.label;
+        return AA.formatPlate(i.plate) + ': ' + i.label;
       });
       body += '\n' + top.join('\n');
     }
@@ -272,7 +272,7 @@
 
         const meta = AA.SERVICE_TYPES[svc.type] || { label: svc.type };
         const d = AA.getServiceDetail(svc, car);
-        let body = car.plate + ' · ' + meta.label;
+        let body = AA.formatPlate(car.plate) + ' · ' + meta.label;
         if (svc.reminderNote) body = svc.reminderNote + '\n' + body;
         body += '\n' + d.summary;
 

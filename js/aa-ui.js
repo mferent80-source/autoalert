@@ -108,7 +108,7 @@
       '<div class="car-thumb" style="background:' + accent + '22;border-color:' + accent + '55">' +
       AA.ui._svcIcon('car', 22) + '</div>' +
       '<div class="car-card-id">' +
-      '<span class="plate-chip mono' + (isAlert && worst === 'expired' ? ' plate-chip-alert' : '') + '">' + AA.escapeHtml(car.plate) + '</span>' +
+      '<span class="plate-chip mono' + (isAlert && worst === 'expired' ? ' plate-chip-alert' : '') + '">' + AA.escapeHtml(AA.formatPlate(car.plate)) + '</span>' +
       '<span class="car-name">' + AA.escapeHtml((car.brand || '') + ' ' + (car.model || '')) + '</span>' +
       '</div>' +
       '<span class="badge badge-' + worst + '">' + AA.STATUS_LABELS[worst] + '</span>' +
@@ -491,7 +491,7 @@
         '<div class="car-thumb car-thumb-sm" style="background:' + accent + '22;border-color:' + accent + '55">' +
         AA.ui._svcIcon('car', 18) + '</div>' +
         '<div class="list-card-info">' +
-        '<div class="plate-chip mono' + (isAlert && worst === 'expired' ? ' plate-chip-alert' : '') + '">' + AA.escapeHtml(car.plate) + '</div>' +
+        '<div class="plate-chip mono' + (isAlert && worst === 'expired' ? ' plate-chip-alert' : '') + '">' + AA.escapeHtml(AA.formatPlate(car.plate)) + '</div>' +
         '<div class="list-sub">' + AA.escapeHtml((car.brand || '') + ' ' + (car.model || '')) +
         ' · ' + AA.formatKm(car.currentKm) +
         (isAlert ? ' · <span class="list-alert-count">' + AA.escapeHtml(AA.ui._alertCountLabel(counts)) + '</span>' : '') +
@@ -543,7 +543,7 @@
       '<div class="car-hero" style="--car-accent:' + accent + '">' +
       '<div class="car-hero-glow"></div>' +
       '<div class="car-hero-thumb">' + AA.ui._svcIcon('car', 36) + '</div>' +
-      '<div class="plate-chip plate-chip-lg mono">' + AA.escapeHtml(car.plate) + '</div>' +
+      '<div class="plate-chip plate-chip-lg mono">' + AA.escapeHtml(AA.formatPlate(car.plate)) + '</div>' +
       '<div class="car-hero-sub">' + AA.escapeHtml((car.brand || '') + ' ' + (car.model || '') + ' · ' + (car.year || '')) + '</div>' +
       '</div>' +
       '<div class="km-box">' +
@@ -624,7 +624,7 @@
       const c = m.data || {};
       return '<div class="modal-overlay" id="modalOverlay"><div class="modal">' +
         '<h3>' + (m.edit ? 'Editează mașina' : 'Mașină nouă') + '</h3>' +
-        '<input class="input mono" id="mPlate" placeholder="B 123 ABC" value="' + AA.escapeHtml(c.plate || '') + '">' +
+        '<input class="input mono input-plate" id="mPlate" placeholder="B 123 ABC" autocapitalize="characters" value="' + AA.escapeHtml(AA.formatPlate(c.plate || '')) + '">' +
         '<input class="input" id="mBrand" placeholder="Marcă" value="' + AA.escapeHtml(c.brand || '') + '">' +
         '<input class="input" id="mModel" placeholder="Model" value="' + AA.escapeHtml(c.model || '') + '">' +
         '<input class="input" id="mYear" type="number" placeholder="An" value="' + (c.year || new Date().getFullYear()) + '">' +
@@ -992,6 +992,18 @@
         AA.showToast((AA.fb._rtdbErr ? AA.fb._rtdbErr(e) : e.message), 'error');
       }
     };
+
+    const plateInput = document.getElementById('mPlate');
+    if (plateInput) {
+      plateInput.oninput = function () {
+        const pos = plateInput.selectionStart;
+        const up = AA.formatPlate(plateInput.value);
+        if (plateInput.value !== up) {
+          plateInput.value = up;
+          plateInput.setSelectionRange(pos, pos);
+        }
+      };
+    }
 
     const save = document.getElementById('modalSave');
     if (!save) return;

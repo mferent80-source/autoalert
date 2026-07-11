@@ -135,7 +135,7 @@
           items.push({
             carId: carId,
             serviceId: sid,
-            plate: car.plate,
+            plate: AA.formatPlate(car.plate),
             carLabel: (car.brand || '') + ' ' + (car.model || ''),
             status: st,
             summary: d.summary,
