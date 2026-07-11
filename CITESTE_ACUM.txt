@@ -1,0 +1,40 @@
+AUTOLERT - DEPLOY FARA FIREBASE CLI (3 pasi in browser)
+========================================================
+
+Firebase CLI nu merge pe PC-ul tau. Am pregatit deploy pe GitHub Pages.
+
+
+PASUL 1 - Asteapta link GitHub (agentul il publica)
+----------------------------------------------------
+URL va fi ceva de genul:
+  https://mferent80-source.github.io/autoalert/
+
+
+PASUL 2 - Firebase Console (2 minute, doar copy-paste)
+------------------------------------------------------
+A) Google Sign-In ON:
+   https://console.firebase.google.com/project/datorietrack/authentication/providers
+   -> Google -> Enable
+
+B) Authorized domains - adauga:
+   mferent80-source.github.io
+   (Authentication -> Settings -> Authorized domains -> Add domain)
+
+C) Reguli RTDB - lipeste tot din fisierul:
+   database.rules.json
+   la:
+   https://console.firebase.google.com/project/datorietrack/database/datorietrack-default-rtdb/rules
+   -> Publish
+
+
+PASUL 3 - Test
+--------------
+Deschide URL-ul GitHub Pages -> Conectare Google -> Creeaza familie
+
+
+LOCAL (fara deploy):
+  http://localhost:8080
+  (necesita localhost in Authorized domains + Google Sign-In ON)
+
+
+Alternativa hosting: trage AutoAlert-hosting.zip pe https://app.netlify.com/drop
