@@ -277,24 +277,16 @@ body::before {
 }
 .stat-pill.active .stat-lbl { color: var(--txt1); }
 
-/* ── License plate chip ── */
-.plate-chip {
-  display: inline-block;
-  background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
-  color: #0f172a;
-  border: 2px solid #1e293b;
-  border-radius: 6px;
-  padding: 4px 10px;
+/* ── Număr înmatriculare ── */
+.plate {
   font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 0.08em;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 2px 8px rgba(0,0,0,.3);
+  font-size: 15px;
+  color: var(--accent);
+  letter-spacing: 0.06em;
 }
-.plate-chip-lg {
-  font-size: 22px;
-  padding: 8px 18px;
-  border-radius: 8px;
-  letter-spacing: 0.12em;
+.plate-lg {
+  font-size: 28px;
+  letter-spacing: 0.1em;
 }
 
 .input, select.input {
@@ -426,7 +418,7 @@ body::before {
   padding: 12px 14px;
 }
 .list-card-info { flex: 1; min-width: 0; }
-.list-card .plate-chip { margin-bottom: 2px; }
+.list-card .plate { margin-bottom: 2px; }
 
 .car-thumb {
   display: flex;
@@ -561,7 +553,7 @@ body::before {
   box-shadow: 0 0 24px color-mix(in srgb, var(--car-accent) 35%, transparent);
 }
 .car-hero-thumb .aa-icon { color: inherit; }
-.car-hero .plate-chip-lg { position: relative; z-index: 1; }
+.car-hero .plate-lg { position: relative; z-index: 1; }
 .car-hero-sub { color: var(--txt2); font-size: 14px; margin-top: 8px; position: relative; z-index: 1; }
 
 .km-box {
