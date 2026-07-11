@@ -327,7 +327,7 @@
         '<div class="car-thumb" style="background:' + accent + '22;border-color:' + accent + '55">' +
         AA.ui._svcIcon('car', 22) + '</div>' +
         '<div class="car-card-id">' +
-        '<span class="plate mono">' + AA.escapeHtml(car.plate) + '</span>' +
+        '<span class="plate-chip mono">' + AA.escapeHtml(car.plate) + '</span>' +
         '<span class="car-name">' + AA.escapeHtml((car.brand || '') + ' ' + (car.model || '')) + '</span>' +
         '</div>' +
         '<span class="badge badge-' + worst + '">' + AA.STATUS_LABELS[worst] + '</span>' +
@@ -357,7 +357,7 @@
         '<div class="car-thumb car-thumb-sm" style="background:' + accent + '22;border-color:' + accent + '55">' +
         AA.ui._svcIcon('car', 18) + '</div>' +
         '<div class="list-card-info">' +
-        '<div class="plate mono">' + AA.escapeHtml(car.plate) + '</div>' +
+        '<div class="plate-chip mono">' + AA.escapeHtml(car.plate) + '</div>' +
         '<div class="list-sub">' + AA.escapeHtml((car.brand || '') + ' ' + (car.model || '')) +
         ' · ' + AA.formatKm(car.currentKm) + '</div></div>' +
         '<span class="status-dot status-dot-' + worst + '"></span></div>';
@@ -399,7 +399,7 @@
       '<div class="car-hero" style="--car-accent:' + accent + '">' +
       '<div class="car-hero-glow"></div>' +
       '<div class="car-hero-thumb">' + AA.ui._svcIcon('car', 36) + '</div>' +
-      '<div class="plate plate-lg mono">' + AA.escapeHtml(car.plate) + '</div>' +
+      '<div class="plate-chip plate-chip-lg mono">' + AA.escapeHtml(car.plate) + '</div>' +
       '<div class="car-hero-sub">' + AA.escapeHtml((car.brand || '') + ' ' + (car.model || '') + ' · ' + (car.year || '')) + '</div>' +
       '</div>' +
       '<div class="km-box">' +
