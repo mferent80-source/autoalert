@@ -37,6 +37,7 @@
 
         "cars": {
           "$carId": {
+            ".write": "auth != null && root.child('families').child($familyId).child('members').child(auth.uid).exists()",
             ".validate": "newData.hasChildren(['plate']) || newData.val() == null",
             "plate": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 10" },
             "brand": { ".validate": "newData.isString() && newData.val().length <= 60" },
@@ -50,6 +51,7 @@
 
             "services": {
               "$serviceId": {
+                ".write": "auth != null && root.child('families').child($familyId).child('members').child(auth.uid).exists()",
                 ".validate": "newData.hasChildren(['type']) || newData.val() == null",
                 "type": {
                   ".validate": "newData.isString() && (newData.val() === 'itp' || newData.val() === 'rca' || newData.val() === 'casco' || newData.val() === 'rovigneta' || newData.val() === 'taxa_pod' || newData.val() === 'ulei' || newData.val() === 'filtre' || newData.val() === 'distributie' || newData.val() === 'revizie' || newData.val() === 'roata_iarna' || newData.val() === 'roata_vara')"
@@ -63,12 +65,15 @@
                 "warnKmBefore": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 50000" },
                 "warnDaysBefore": { ".validate": "!newData.exists() || newData.hasChildren()" },
                 "notes": { ".validate": "newData.isString() && newData.val().length <= 500" },
-                "cost": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000" }
+                "cost": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000" },
+                "createdAt": { ".validate": "newData.isNumber()" },
+                "updatedAt": { ".validate": "newData.isNumber()" }
               }
             },
 
             "history": {
               "$historyId": {
+                ".write": "auth != null && root.child('families').child($familyId).child('members').child(auth.uid).exists()",
                 ".validate": "newData.hasChildren(['type', 'doneDate']) || newData.val() == null",
                 "type": { ".validate": "newData.isString()" },
                 "doneDate": { ".validate": "newData.isString() && newData.val().length <= 12" },

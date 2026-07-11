@@ -387,6 +387,7 @@
         '<div class="svc-actions">' +
         '<button class="btn btn-sm btn-done" data-done="' + sid + '">' + AA.ui._svcIcon('check', 14) + ' Făcut</button>' +
         '<button class="btn btn-sm btn-ghost" data-edit-svc="' + sid + '">Editează</button>' +
+        '<button class="btn btn-sm btn-danger" data-del-svc="' + sid + '">Șterge</button>' +
         '</div></div></div></div>';
     }).join('');
 
@@ -401,6 +402,10 @@
 
     const accent = AA.ui._carColor(car);
     return '<button class="btn btn-ghost back-btn" data-back>← Înapoi</button>' +
+      '<div class="car-toolbar">' +
+      '<button class="btn btn-sm btn-ghost" id="btnEditCar">Editează mașina</button>' +
+      '<button class="btn btn-sm btn-danger" id="btnDelCar">Șterge mașina</button>' +
+      '</div>' +
       '<div class="car-hero" style="--car-accent:' + accent + '">' +
       '<div class="car-hero-glow"></div>' +
       '<div class="car-hero-thumb">' + AA.ui._svcIcon('car', 36) + '</div>' +
@@ -488,18 +493,46 @@
         return '<option value="' + k + '"' + (m.data && m.data.type === k ? ' selected' : '') + '>' + t.label + '</option>';
       }).join('');
       const s = m.data || {};
+      const typeKey = s.type || 'itp';
+      const meta = AA.SERVICE_TYPES[typeKey] || { mode: 'date' };
+      const mode = s.mode || meta.mode || 'date';
+      const showDate = mode === 'date' || mode === 'both';
+      const showKm = mode === 'mileage' || mode === 'both';
+      const title = m.edit ? ('Editează: ' + (meta.label || typeKey)) : 'Serviciu nou';
       return '<div class="modal-overlay" id="modalOverlay"><div class="modal modal-lg">' +
-        '<h3>' + (m.edit ? 'Editează serviciu' : 'Serviciu nou') + '</h3>' +
-        (m.edit ? '' : '<select class="input" id="mSvcType">' + types + '</select>') +
-        '<label class="lbl">Ultima dată</label><input class="input" id="mLastDate" type="date" value="' + (s.lastDate || AA.todayStr()) + '">' +
-        '<label class="lbl">Următoarea dată</label><input class="input" id="mNextDate" type="date" value="' + (s.nextDate || '') + '">' +
-        '<label class="lbl">Ultimul km</label><input class="input mono" id="mLastKm" type="number" value="' + (s.lastKm || 0) + '">' +
-        '<label class="lbl">Interval km</label><input class="input mono" id="mIntervalKm" type="number" value="' + (s.intervalKm || '') + '">' +
-        '<label class="lbl">Alertă km înainte</label><input class="input mono" id="mWarnKm" type="number" value="' + (s.warnKmBefore || '') + '">' +
+        '<h3>' + AA.escapeHtml(title) + '</h3>' +
+        (m.edit ? '<p class="muted modal-hint">Tip: <b>' + AA.escapeHtml(meta.label || typeKey) + '</b></p>' :
+          '<select class="input" id="mSvcType">' + types + '</select>') +
+        (showDate ? (
+          '<div class="modal-section">Termen (dată)</div>' +
+          '<label class="lbl">Ultima dată</label><input class="input" id="mLastDate" type="date" value="' + (s.lastDate || AA.todayStr()) + '">' +
+          '<label class="lbl">Următoarea dată</label><input class="input" id="mNextDate" type="date" value="' + (s.nextDate || '') + '">'
+        ) : '') +
+        (showKm ? (
+          '<div class="modal-section">Termen (km)</div>' +
+          '<label class="lbl">Ultimul km</label><input class="input mono" id="mLastKm" type="number" min="0" value="' + (s.lastKm != null ? s.lastKm : 0) + '">' +
+          '<label class="lbl">Interval km</label><input class="input mono" id="mIntervalKm" type="number" min="0" value="' + (s.intervalKm != null ? s.intervalKm : (meta.defaultIntervalKm || '')) + '">' +
+          '<label class="lbl">Alertă km înainte</label><input class="input mono" id="mWarnKm" type="number" min="0" value="' + (s.warnKmBefore != null ? s.warnKmBefore : (meta.warnKmBefore || '')) + '">'
+        ) : '') +
         '<label class="lbl">Note</label><input class="input" id="mNotes" value="' + AA.escapeHtml(s.notes || '') + '">' +
         '<div class="modal-actions">' +
+        (m.edit && m.sid ? '<button class="btn btn-danger" id="modalDelete">Șterge</button>' : '') +
         '<button class="btn btn-ghost" id="modalCancel">Anulează</button>' +
         '<button class="btn btn-primary" id="modalSave">Salvează</button></div></div></div>';
+    }
+    if (m.type === 'mark-done') {
+      const s = m.data || {};
+      const meta = AA.SERVICE_TYPES[s.type] || { label: s.type };
+      const gst = AA.ui.getState();
+      const car = gst.cars && _selectedCarId ? gst.cars[_selectedCarId] : null;
+      return '<div class="modal-overlay" id="modalOverlay"><div class="modal">' +
+        '<h3>Marchează făcut: ' + AA.escapeHtml(meta.label) + '</h3>' +
+        '<label class="lbl">Data</label><input class="input" id="mDoneDate" type="date" value="' + AA.todayStr() + '">' +
+        '<label class="lbl">Km la intervenție</label><input class="input mono" id="mDoneKm" type="number" value="' + (car ? car.currentKm : 0) + '">' +
+        '<label class="lbl">Cost (RON, opțional)</label><input class="input mono" id="mDoneCost" type="number" min="0" placeholder="0">' +
+        '<div class="modal-actions">' +
+        '<button class="btn btn-ghost" id="modalCancel">Anulează</button>' +
+        '<button class="btn btn-primary" id="modalSave">Confirmă</button></div></div></div>';
     }
     if (m.type === 'pick-service') {
       const opts = Object.keys(AA.SERVICE_TYPES).map(function (k) {
@@ -513,8 +546,8 @@
     return '';
   };
 
-  AA.ui.openModal = function (type, data, edit) {
-    _modal = { type: type, data: data || {}, edit: !!edit };
+  AA.ui.openModal = function (type, data, edit, opts) {
+    _modal = Object.assign({ type: type, data: data || {}, edit: !!edit }, opts || {});
     AA.ui.render();
   };
 
@@ -626,24 +659,51 @@
     if (addSvc) addSvc.onclick = function () { AA.ui.openModal('pick-service'); };
 
     document.querySelectorAll('[data-done]').forEach(function (b) {
-      b.onclick = async function () {
+      b.onclick = function () {
         const sid = b.dataset.done;
-        try {
-          AA.ui.animateDone(sid);
-          await AA.cars.markDone(_selectedCarId, sid, {});
-          AA.showToast('Marcat ca făcut', 'success');
-        } catch (e) { AA.showToast(e.message, 'error'); }
+        const car = st.cars[_selectedCarId];
+        const svc = car && car.services ? car.services[sid] : null;
+        if (!svc) return;
+        AA.ui.openModal('mark-done', svc, true, { sid: sid });
       };
     });
 
     document.querySelectorAll('[data-edit-svc]').forEach(function (b) {
       b.onclick = function () {
         const car = st.cars[_selectedCarId];
-        AA.ui.openModal('service', car.services[b.dataset.editSvc], true);
-        _modal.sid = b.dataset.editSvc;
-        AA.ui.render();
+        AA.ui.openModal('service', car.services[b.dataset.editSvc], true, { sid: b.dataset.editSvc });
       };
     });
+
+    document.querySelectorAll('[data-del-svc]').forEach(function (b) {
+      b.onclick = async function () {
+        if (!confirm('Ștergi acest serviciu?')) return;
+        try {
+          await AA.cars.removeService(_selectedCarId, b.dataset.delSvc);
+          AA.showToast('Serviciu șters', 'info');
+        } catch (e) {
+          AA.showToast((AA.fb._rtdbErr ? AA.fb._rtdbErr(e) : e.message), 'error');
+        }
+      };
+    });
+
+    const editCar = document.getElementById('btnEditCar');
+    if (editCar) editCar.onclick = function () {
+      const car = st.cars[_selectedCarId];
+      AA.ui.openModal('car', car, true, { carId: _selectedCarId });
+    };
+
+    const delCar = document.getElementById('btnDelCar');
+    if (delCar) delCar.onclick = async function () {
+      if (!confirm('Ștergi mașina și toate serviciile?')) return;
+      try {
+        await AA.cars.remove(_selectedCarId);
+        AA.showToast('Mașină ștearsă', 'info');
+        AA.ui.navigate('cars');
+      } catch (e) {
+        AA.showToast((AA.fb._rtdbErr ? AA.fb._rtdbErr(e) : e.message), 'error');
+      }
+    };
   };
 
   AA.ui._bindFamily = function (st) {
@@ -706,48 +766,82 @@
       document.querySelectorAll('[data-type]').forEach(function (b) {
         b.onclick = async function () {
           try {
-            await AA.cars.addService(_selectedCarId, b.dataset.type);
-            AA.showToast('Serviciu adăugat', 'success');
-            AA.ui.closeModal();
-          } catch (e) { AA.showToast(e.message, 'error'); }
+            const r = await AA.cars.addService(_selectedCarId, b.dataset.type);
+            AA.showToast('Adăugat — completează datele', 'success');
+            AA.ui.openModal('service', r.svc, true, { sid: r.sid });
+          } catch (e) {
+            AA.showToast((AA.fb._rtdbErr ? AA.fb._rtdbErr(e) : e.message), 'error');
+          }
         };
       });
       return;
     }
+
+    const delBtn = document.getElementById('modalDelete');
+    if (delBtn) delBtn.onclick = async function () {
+      if (!_modal.sid || !confirm('Ștergi acest serviciu?')) return;
+      try {
+        await AA.cars.removeService(_selectedCarId, _modal.sid);
+        AA.showToast('Serviciu șters', 'info');
+        AA.ui.closeModal();
+      } catch (e) {
+        AA.showToast((AA.fb._rtdbErr ? AA.fb._rtdbErr(e) : e.message), 'error');
+      }
+    };
 
     const save = document.getElementById('modalSave');
     if (!save) return;
     save.onclick = async function () {
       try {
         if (_modal.type === 'car') {
-          await AA.cars.add({
+          const payload = {
             plate: document.getElementById('mPlate').value,
             brand: document.getElementById('mBrand').value,
             model: document.getElementById('mModel').value,
             year: document.getElementById('mYear').value,
             currentKm: document.getElementById('mKm').value
-          });
-          AA.showToast('Mașină adăugată', 'success');
-        } else if (_modal.type === 'service') {
-          const patch = {
-            lastDate: document.getElementById('mLastDate').value,
-            nextDate: document.getElementById('mNextDate').value,
-            lastKm: Number(document.getElementById('mLastKm').value),
-            intervalKm: Number(document.getElementById('mIntervalKm').value),
-            warnKmBefore: Number(document.getElementById('mWarnKm').value),
-            notes: document.getElementById('mNotes').value
           };
+          if (_modal.edit && _modal.carId) {
+            await AA.cars.update(_modal.carId, payload);
+            if (payload.currentKm != null) await AA.cars.updateKm(_modal.carId, payload.currentKm);
+            AA.showToast('Mașină actualizată', 'success');
+          } else {
+            await AA.cars.add(payload);
+            AA.showToast('Mașină adăugată', 'success');
+          }
+        } else if (_modal.type === 'service') {
+          const patch = { notes: document.getElementById('mNotes').value };
+          const ld = document.getElementById('mLastDate');
+          const nd = document.getElementById('mNextDate');
+          const lk = document.getElementById('mLastKm');
+          const ik = document.getElementById('mIntervalKm');
+          const wk = document.getElementById('mWarnKm');
+          if (ld) patch.lastDate = ld.value;
+          if (nd) patch.nextDate = nd.value;
+          if (lk) patch.lastKm = lk.value;
+          if (ik) patch.intervalKm = ik.value;
+          if (wk) patch.warnKmBefore = wk.value;
           if (_modal.edit && _modal.sid) {
             await AA.cars.updateService(_selectedCarId, _modal.sid, patch);
           } else {
             const type = document.getElementById('mSvcType').value;
-            const sid = await AA.cars.addService(_selectedCarId, type);
-            await AA.cars.updateService(_selectedCarId, sid, patch);
+            const r = await AA.cars.addService(_selectedCarId, type);
+            await AA.cars.updateService(_selectedCarId, r.sid, patch);
           }
           AA.showToast('Serviciu salvat', 'success');
+        } else if (_modal.type === 'mark-done') {
+          AA.ui.animateDone(_modal.sid);
+          await AA.cars.markDone(_selectedCarId, _modal.sid, {
+            date: document.getElementById('mDoneDate').value,
+            km: document.getElementById('mDoneKm').value,
+            cost: document.getElementById('mDoneCost').value
+          });
+          AA.showToast('Marcat ca făcut', 'success');
         }
         AA.ui.closeModal();
-      } catch (e) { AA.showToast(e.message, 'error'); }
+      } catch (e) {
+        AA.showToast((AA.fb._rtdbErr ? AA.fb._rtdbErr(e) : e.message), 'error');
+      }
     };
   };
 

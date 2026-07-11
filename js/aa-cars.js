@@ -5,6 +5,12 @@
   const AA = global.AA || {};
   AA.cars = AA.cars || {};
 
+  function numVal(v, fallback) {
+    if (v === '' || v == null) return fallback;
+    const n = Number(v);
+    return isNaN(n) ? fallback : n;
+  }
+
   AA.cars.add = async function (data) {
     const id = AA.genId();
     const car = {
@@ -32,8 +38,6 @@
     if (patch.model != null) allowed.model = String(patch.model).trim().slice(0, 60);
     if (patch.year != null) allowed.year = Number(patch.year);
     if (patch.color != null) allowed.color = String(patch.color).slice(0, 20);
-    allowed.updatedAt = Date.now();
-    allowed.updatedBy = AA.fb.getState().user.uid;
     await AA.fb.updateFamilyData('cars/' + carId, allowed);
   };
 
@@ -64,16 +68,37 @@
     if (car && car.currentKm != null && (svc.mode === 'mileage' || svc.mode === 'both')) {
       svc.lastKm = car.currentKm;
     }
-    await AA.fb.set('cars/' + carId + '/services/' + sid, svc);
-    return sid;
+    try {
+      await AA.fb.set('cars/' + carId + '/services/' + sid, svc);
+    } catch (e) {
+      throw new Error(AA.fb._rtdbErr ? AA.fb._rtdbErr(e) : e.message);
+    }
+    return { sid: sid, svc: svc };
   };
 
   AA.cars.updateService = async function (carId, sid, patch) {
-    const allowed = Object.assign({}, patch, {
-      updatedAt: Date.now()
-    });
-    delete allowed.type;
-    await AA.fb.updateFamilyData('cars/' + carId + '/services/' + sid, allowed);
+    const allowed = { updatedAt: Date.now() };
+    if (patch.lastDate != null && patch.lastDate !== '') allowed.lastDate = String(patch.lastDate);
+    if (patch.nextDate != null && patch.nextDate !== '') allowed.nextDate = String(patch.nextDate);
+    if (patch.lastKm != null) allowed.lastKm = numVal(patch.lastKm, 0);
+    if (patch.intervalKm != null && patch.intervalKm !== '') allowed.intervalKm = numVal(patch.intervalKm, 0);
+    if (patch.warnKmBefore != null && patch.warnKmBefore !== '') allowed.warnKmBefore = numVal(patch.warnKmBefore, 0);
+    if (patch.notes != null) allowed.notes = String(patch.notes).slice(0, 500);
+    if (patch.cost != null && patch.cost !== '') allowed.cost = numVal(patch.cost, 0);
+    if (patch.mode != null) allowed.mode = patch.mode;
+    try {
+      await AA.fb.updateFamilyData('cars/' + carId + '/services/' + sid, allowed);
+    } catch (e) {
+      throw new Error(AA.fb._rtdbErr ? AA.fb._rtdbErr(e) : e.message);
+    }
+  };
+
+  AA.cars.removeService = async function (carId, sid) {
+    try {
+      await AA.fb.remove('cars/' + carId + '/services/' + sid);
+    } catch (e) {
+      throw new Error(AA.fb._rtdbErr ? AA.fb._rtdbErr(e) : e.message);
+    }
   };
 
   AA.cars.markDone = async function (carId, sid, opts) {
@@ -108,17 +133,21 @@
       if (!svc.intervalKm && meta.defaultIntervalKm) updates.intervalKm = meta.defaultIntervalKm;
     }
 
-    await AA.fb.updateFamilyData('cars/' + carId + '/services/' + sid, updates);
-    await AA.fb.set('cars/' + carId + '/history/' + histId, {
-      serviceId: sid,
-      type: svc.type,
-      doneDate: today,
-      doneKm: km,
-      cost: Number(opts.cost) || 0,
-      notes: String(opts.notes || '').slice(0, 500),
-      doneBy: AA.fb.getState().user.uid,
-      createdAt: Date.now()
-    });
+    try {
+      await AA.fb.updateFamilyData('cars/' + carId + '/services/' + sid, updates);
+      await AA.fb.set('cars/' + carId + '/history/' + histId, {
+        serviceId: sid,
+        type: svc.type,
+        doneDate: today,
+        doneKm: km,
+        cost: Number(opts.cost) || 0,
+        notes: String(opts.notes || '').slice(0, 500),
+        doneBy: AA.fb.getState().user.uid,
+        createdAt: Date.now()
+      });
+    } catch (e) {
+      throw new Error(AA.fb._rtdbErr ? AA.fb._rtdbErr(e) : e.message);
+    }
   };
 
   global.AA = AA;

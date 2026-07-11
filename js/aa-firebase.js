@@ -330,10 +330,10 @@
   AA.fb.updateFamilyData = async function (path, data) {
     if (!_user || !_state.familyId) throw new Error('Fără familie');
     const { ref, update } = AA.fb._api;
-    const payload = Object.assign({}, data, {
-      updatedAt: Date.now(),
-      updatedBy: _user.uid
-    });
+    const payload = Object.assign({}, data);
+    const nested = /\/services\//.test(path) || /\/history\//.test(path);
+    payload.updatedAt = Date.now();
+    if (!nested) payload.updatedBy = _user.uid;
     await update(ref(_db, 'families/' + _state.familyId + '/' + path), payload);
   };
 
