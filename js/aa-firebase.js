@@ -212,6 +212,9 @@
     if (/PERMISSION_DENIED/i.test(msg) || (e && e.code === 'PERMISSION_DENIED')) {
       return 'Acces refuzat de regulile RTDB. Publică database.rules.json în Firebase Console (Realtime Database → Rules).';
     }
+    if (/undefined/i.test(msg)) {
+      return 'Date invalide (câmp undefined). Reîncarcă pagina cu Ctrl+Shift+R.';
+    }
     return msg || 'Eroare Firebase';
   };
 
@@ -334,14 +337,16 @@
     const nested = /\/services\//.test(path) || /\/history\//.test(path);
     payload.updatedAt = Date.now();
     if (!nested) payload.updatedBy = _user.uid;
-    const clean = AA.cleanRtdb ? AA.cleanRtdb(payload) : payload;
+    const clean = AA.cleanRtdb(payload);
+    if (!clean || typeof clean !== 'object') throw new Error('Payload Firebase invalid');
     await update(ref(_db, 'families/' + _state.familyId + '/' + path), clean);
   };
 
   AA.fb.set = async function (path, data) {
     if (!_user || !_state.familyId) throw new Error('Fără familie');
     const { ref, set } = AA.fb._api;
-    const clean = AA.cleanRtdb ? AA.cleanRtdb(data) : data;
+    const clean = AA.cleanRtdb(data);
+    if (!clean || typeof clean !== 'object') throw new Error('Payload Firebase invalid');
     await set(ref(_db, 'families/' + _state.familyId + '/' + path), clean);
   };
 

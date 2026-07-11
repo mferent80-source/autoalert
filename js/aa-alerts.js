@@ -178,7 +178,7 @@
       svc.intervalKm = meta.defaultIntervalKm || 10000;
       if (meta.warnKmBefore != null) svc.warnKmBefore = meta.warnKmBefore;
     }
-    return AA.cleanRtdb ? AA.cleanRtdb(svc) : svc;
+    return AA.cleanRtdb(svc);
   };
 
   global.AA = AA;

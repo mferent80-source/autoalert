@@ -3,7 +3,7 @@
   'use strict';
 
   const AA = global.AA || {};
-  AA.APP_VERSION = '1.3.2';
+  AA.APP_VERSION = '1.3.3';
 
   AA.LS = {
     morningNotif: 'aa_morning_notif',
@@ -91,17 +91,22 @@
   };
 
   AA.cleanRtdb = function (obj) {
-    if (obj == null || typeof obj !== 'object') return obj;
-    if (Array.isArray(obj)) {
-      const arr = obj.map(AA.cleanRtdb).filter(function (v) { return v !== undefined; });
-      return arr.length ? arr : undefined;
+    if (obj == null) return obj;
+    try {
+      return JSON.parse(JSON.stringify(obj));
+    } catch (_) {
+      if (typeof obj !== 'object') return obj;
+      if (Array.isArray(obj)) {
+        return obj.map(AA.cleanRtdb).filter(function (v) { return v !== undefined; });
+      }
+      const out = {};
+      Object.keys(obj).forEach(function (k) {
+        if (obj[k] === undefined) return;
+        const v = AA.cleanRtdb(obj[k]);
+        if (v !== undefined) out[k] = v;
+      });
+      return out;
     }
-    const out = {};
-    Object.keys(obj).forEach(function (k) {
-      const v = AA.cleanRtdb(obj[k]);
-      if (v !== undefined) out[k] = v;
-    });
-    return Object.keys(out).length ? out : undefined;
   };
 
   AA.escapeHtml = function (str) {

@@ -71,8 +71,9 @@
     if (car.currentKm != null && (svc.mode === 'mileage' || svc.mode === 'both')) {
       svc.lastKm = car.currentKm;
     }
+    const payload = AA.cleanRtdb(svc);
     try {
-      await AA.fb.set('cars/' + carId + '/services/' + sid, svc);
+      await AA.fb.set('cars/' + carId + '/services/' + sid, payload);
     } catch (e) {
       const err = AA.fb._rtdbErr ? AA.fb._rtdbErr(e) : ((e && e.message) || 'Eroare Firebase');
       throw new Error(meta.label + ': ' + err);
