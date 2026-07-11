@@ -17,9 +17,11 @@ if (-not (Test-Path "firebase-config.js")) {
 
 Write-Host "1) Console Firebase — Authentication > Sign-in method > Google > Enable"
 Write-Host "2) Console Firebase — Authentication > Settings > Authorized domains > adaugă localhost"
-Write-Host "3) Deploy reguli RTDB (alege una):"
-Write-Host "   a) firebase login && firebase deploy --only database"
-Write-Host "   b) RTDB > Rules > lipește conținutul din database.rules.json`n"
+Write-Host "3) Deploy: .\scripts\deploy.ps1  (rules + hosting)"
+Write-Host "   Manual rules: RTDB > Rules > lipește database.rules.json`n"
+Write-Host "4) Live după deploy:"
+Write-Host "   https://datorietrack.web.app"
+Write-Host "   https://datorietrack.firebaseapp.com`n"
 
 $open = Read-Host "Deschid Console Firebase în browser? (y/n)"
 if ($open -eq "y") {
