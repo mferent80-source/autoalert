@@ -207,6 +207,14 @@
     await update(ref(_db, 'users/' + uid), data);
   };
 
+  AA.fb._rtdbErr = function (e) {
+    const msg = (e && e.message) || '';
+    if (/PERMISSION_DENIED/i.test(msg) || (e && e.code === 'PERMISSION_DENIED')) {
+      return 'Acces refuzat de regulile RTDB. Publică database.rules.json în Firebase Console (Realtime Database → Rules).';
+    }
+    return msg || 'Eroare Firebase';
+  };
+
   AA.fb.createFamily = async function (name) {
     if (!_user) throw new Error('Neautentificat');
     const { ref, set, get, query, orderByChild, equalTo } = AA.fb._api;
@@ -214,11 +222,16 @@
     let code = AA.genInviteCode();
     let attempts = 0;
     while (attempts < 8) {
-      const q = query(ref(_db, 'families'), orderByChild('inviteCode'), equalTo(code));
-      const existing = await get(q);
-      if (!existing.exists()) break;
-      code = AA.genInviteCode();
-      attempts++;
+      try {
+        const q = query(ref(_db, 'families'), orderByChild('inviteCode'), equalTo(code));
+        const existing = await get(q);
+        if (!existing.exists()) break;
+        code = AA.genInviteCode();
+        attempts++;
+      } catch (e) {
+        if (/PERMISSION_DENIED/i.test((e && e.message) || '')) break;
+        throw e;
+      }
     }
     const now = Date.now();
     const familyData = {
@@ -235,12 +248,16 @@
       },
       cars: {}
     };
-    await set(ref(_db, 'families/' + familyId), familyData);
-    await AA.fb._writeUser(_user.uid, {
-      familyId: familyId,
-      displayName: _state.user.displayName,
-      email: _state.user.email || ''
-    });
+    try {
+      await set(ref(_db, 'families/' + familyId), familyData);
+      await AA.fb._writeUser(_user.uid, {
+        familyId: familyId,
+        displayName: _state.user.displayName,
+        email: _state.user.email || ''
+      });
+    } catch (e) {
+      throw new Error(AA.fb._rtdbErr(e));
+    }
     return { familyId: familyId, inviteCode: code };
   };
 

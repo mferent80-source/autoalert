@@ -553,7 +553,9 @@
         const r = await AA.fb.createFamily(document.getElementById('familyName').value);
         AA.showToast('Familie creată! Cod: ' + r.inviteCode, 'success');
         AA.ui.navigate('dashboard');
-      } catch (e) { AA.showToast(e.message, 'error'); }
+      } catch (e) {
+        AA.showToast((AA.fb._rtdbErr ? AA.fb._rtdbErr(e) : e.message), 'error');
+      }
     };
     const join = document.getElementById('btnJoinFamily');
     if (join) join.onclick = async function () {
@@ -561,7 +563,9 @@
         await AA.fb.joinFamily(document.getElementById('inviteCode').value);
         AA.showToast('Bine ai venit în familie!', 'success');
         AA.ui.navigate('dashboard');
-      } catch (e) { AA.showToast(e.message, 'error'); }
+      } catch (e) {
+        AA.showToast((AA.fb._rtdbErr ? AA.fb._rtdbErr(e) : e.message), 'error');
+      }
     };
     const lo = document.getElementById('btnLogout');
     if (lo) lo.onclick = function () { AA.fb.signOut(); };

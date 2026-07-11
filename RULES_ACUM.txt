@@ -1,0 +1,14 @@
+FIX "ACCESS DENIED" la creare familie
+======================================
+
+Deschide (proiect autoalert-89b80):
+https://console.firebase.google.com/project/autoalert-89b80/database/autoalert-89b80-default-rtdb/rules
+
+Sterge TOT. Lipeste TOT fisierul database.rules.json din folderul AutoAlert.
+
+IMPORTANT: la "families" trebuie sa existe linia:
+  ".read": "auth != null",
+
+Apasa PUBLISH.
+
+Apoi reincarca app-ul (Ctrl+Shift+R) si incearca din nou Creeaza familie.
