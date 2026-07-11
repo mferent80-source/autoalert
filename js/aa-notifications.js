@@ -78,12 +78,20 @@
     return true;
   };
 
+  AA.notif._isLiveWindow = function () {
+    const now = new Date();
+    const day = now.getDay();
+    if (day === 0 || day === 6) return false;
+    const h = now.getHours();
+    return h >= 8 && h <= 18;
+  };
+
   AA.notif.toggleLive = async function (enabled) {
     if (enabled) {
       if (!(await AA.notif._requestPerm())) return false;
       localStorage.setItem(AA.LS.liveNotif, '1');
       AA.notif._startLiveWatcher();
-      AA.showToast('Alerte live active (la 30 min)', 'success');
+      AA.showToast('Alerte live active (L–V, 8–18)', 'success');
       return true;
     }
     localStorage.setItem(AA.LS.liveNotif, '0');
@@ -228,6 +236,7 @@
 
   AA.notif.checkLive = function () {
     if (!AA.notif.isLiveEnabled()) return;
+    if (!AA.notif._isLiveWindow()) return;
     const cars = (AA.fb.getState().cars) || {};
     const agg = AA.aggregateAlerts(cars);
     if (!agg.expired && !agg.urgent) return;

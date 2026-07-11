@@ -11,7 +11,7 @@
   let _demoMode = false;
   let _renderTimer = null;
   let _deepLinkDone = false;
-  let _okCollapsed = true;
+  let _okCollapsed = false;
 
   AA.ui._countCarAlerts = function (car) {
     const c = { expired: 0, urgent: 0, warning: 0, total: 0 };
@@ -56,7 +56,7 @@
     let text = '';
     if (agg.expired) {
       cls = 'danger';
-      text = agg.expired + ' EXPIRAT' + (agg.expired > 1 ? 'E' : '') + ' — acționează imediat';
+      text = agg.expired + ' serviciu' + (agg.expired > 1 ? 'i' : '') + ' expirat' + (agg.expired > 1 ? 'e' : '') + ' — verifică azi';
     } else if (agg.urgent) {
       cls = 'urgent';
       text = alertCars + ' mașin' + (alertCars > 1 ? 'i' : 'ă') + ' cu alerte urgente';
@@ -64,8 +64,7 @@
       text = alertCars + ' mașin' + (alertCars > 1 ? 'i' : 'ă') + ' de verificat în curând';
     }
     return '<div class="alert-sticky-banner alert-sticky-' + cls + '">' +
-      '<span class="alert-sticky-pulse"></span>' +
-      '<span class="alert-sticky-icon">!</span>' +
+      '<span class="alert-sticky-icon">⚠</span>' +
       '<span class="alert-sticky-text">' + AA.escapeHtml(text) + '</span></div>';
   };
 
@@ -99,20 +98,20 @@
         '<span>' + AA.escapeHtml(AA.ui._alertCountLabel(counts)) + '</span></div>'
       : '';
 
+    const glow = (isAlert && worst === 'expired') ? ' card-glow-expired' : '';
     return '<div class="car-card' + (isAlert ? ' car-card-hot car-card-hot-' + worst : ' car-card-ok') +
-      ' status-border-' + worst + ' card-glow-' + worst + '" data-car="' + id + '" style="--car-accent:' + accent + '">' +
-      (isAlert ? '<div class="car-card-corner car-card-corner-' + worst + '"></div>' : '') +
+      ' status-border-' + worst + glow + '" data-car="' + id + '" style="--car-accent:' + accent + '">' +
       ribbon +
       '<div class="car-card-stripe car-card-stripe-' + worst + '"></div>' +
       '<div class="car-card-body">' +
       '<div class="car-card-head">' +
-      '<div class="car-thumb' + (isAlert ? ' car-thumb-pulse' : '') + '" style="background:' + accent + '22;border-color:' + accent + '55">' +
+      '<div class="car-thumb" style="background:' + accent + '22;border-color:' + accent + '55">' +
       AA.ui._svcIcon('car', 22) + '</div>' +
       '<div class="car-card-id">' +
-      '<span class="plate-chip mono' + (isAlert ? ' plate-chip-alert' : '') + '">' + AA.escapeHtml(car.plate) + '</span>' +
+      '<span class="plate-chip mono' + (isAlert && worst === 'expired' ? ' plate-chip-alert' : '') + '">' + AA.escapeHtml(car.plate) + '</span>' +
       '<span class="car-name">' + AA.escapeHtml((car.brand || '') + ' ' + (car.model || '')) + '</span>' +
       '</div>' +
-      '<span class="badge badge-' + worst + (isAlert ? ' badge-pulse' : '') + '">' + AA.STATUS_LABELS[worst] + '</span>' +
+      '<span class="badge badge-' + worst + '">' + AA.STATUS_LABELS[worst] + '</span>' +
       '</div>' +
       (alerts || '<div class="svc-row status-ok"><span class="svc-label">' + AA.ui._svcBubble('check', 26) + '<span>Nici o alertă activă</span></span></div>') +
       '</div></div>';
@@ -483,17 +482,16 @@
       const counts = AA.ui._countCarAlerts(car);
       const isAlert = worst !== 'ok';
       const accent = AA.ui._carColor(car);
-      const alertPill = isAlert
+      const alertPill = (isAlert && worst !== 'warning')
         ? '<span class="list-alert-pill list-alert-pill-' + worst + '">' + AA.STATUS_LABELS[worst] + '</span>'
         : '<span class="status-dot status-dot-lg status-dot-' + worst + '"></span>';
       return '<div class="list-card' + (isAlert ? ' list-card-hot list-card-hot-' + worst : '') +
         ' status-border-' + worst + '" data-car="' + id + '" style="--car-accent:' + accent + '">' +
-        (isAlert ? '<div class="list-card-bar list-card-bar-' + worst + '"></div>' : '') +
         '<div class="list-card-stripe list-card-stripe-' + worst + '"></div>' +
-        '<div class="car-thumb car-thumb-sm' + (isAlert ? ' car-thumb-pulse' : '') + '" style="background:' + accent + '22;border-color:' + accent + '55">' +
+        '<div class="car-thumb car-thumb-sm" style="background:' + accent + '22;border-color:' + accent + '55">' +
         AA.ui._svcIcon('car', 18) + '</div>' +
         '<div class="list-card-info">' +
-        '<div class="plate-chip mono' + (isAlert ? ' plate-chip-alert plate-chip-alert-' + worst : '') + '">' + AA.escapeHtml(car.plate) + '</div>' +
+        '<div class="plate-chip mono' + (isAlert && worst === 'expired' ? ' plate-chip-alert' : '') + '">' + AA.escapeHtml(car.plate) + '</div>' +
         '<div class="list-sub">' + AA.escapeHtml((car.brand || '') + ' ' + (car.model || '')) +
         ' · ' + AA.formatKm(car.currentKm) +
         (isAlert ? ' · <span class="list-alert-count">' + AA.escapeHtml(AA.ui._alertCountLabel(counts)) + '</span>' : '') +
@@ -517,7 +515,7 @@
         AA.ui._ring(svc, car, d) +
         '<div class="svc-card-body">' +
         '<div class="svc-head"><span class="svc-title">' + AA.ui._svcBubble(svc.type, 34) + '<span>' + AA.escapeHtml(d.label) + '</span></span>' +
-        '<span class="badge badge-' + d.status + (d.status !== 'ok' ? ' badge-pulse' : '') + '">' + AA.STATUS_LABELS[d.status] + '</span></div>' +
+        '<span class="badge badge-' + d.status + '">' + AA.STATUS_LABELS[d.status] + '</span></div>' +
         '<div class="list-sub">' + AA.escapeHtml(d.summary) + rem + '</div>' +
         AA.ui._progressBar(d.progress, d.status) +
         '<div class="svc-actions">' +
@@ -601,7 +599,7 @@
       '<input type="checkbox" id="chkEvening" ' + (evening ? 'checked' : '') + '>' +
       '</label>' +
       '<label class="toggle-row">' +
-      '<span>Alerte live (la 30 min)</span>' +
+      '<span>Alerte live (L–V, 8–18)</span>' +
       '<input type="checkbox" id="chkLive" ' + (live ? 'checked' : '') + '>' +
       '</label>' +
       '<label class="toggle-row">' +
