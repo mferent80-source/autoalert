@@ -11,6 +11,7 @@
   let _demoMode = false;
   let _renderTimer = null;
   let _deepLinkDone = false;
+  let _okCollapsed = true;
 
   AA.ui._countCarAlerts = function (car) {
     const c = { expired: 0, urgent: 0, warning: 0, total: 0 };
@@ -32,6 +33,42 @@
     return parts.join(' · ');
   };
 
+  AA.ui._countAlertCars = function (cars) {
+    let n = 0;
+    Object.keys(cars || {}).forEach(function (id) {
+      if (AA.getCarWorstStatus(cars[id]) !== 'ok') n++;
+    });
+    return n;
+  };
+
+  AA.ui._worstFleetStatus = function (cars) {
+    let worst = 'ok';
+    Object.keys(cars || {}).forEach(function (id) {
+      const s = AA.getCarWorstStatus(cars[id]);
+      if ((AA.STATUS_RANK[s] ?? 3) < (AA.STATUS_RANK[worst] ?? 3)) worst = s;
+    });
+    return worst;
+  };
+
+  AA.ui._renderAlertSticky = function (agg, alertCars) {
+    if (!alertCars) return '';
+    let cls = 'warn';
+    let text = '';
+    if (agg.expired) {
+      cls = 'danger';
+      text = agg.expired + ' EXPIRAT' + (agg.expired > 1 ? 'E' : '') + ' — acționează imediat';
+    } else if (agg.urgent) {
+      cls = 'urgent';
+      text = alertCars + ' mașin' + (alertCars > 1 ? 'i' : 'ă') + ' cu alerte urgente';
+    } else {
+      text = alertCars + ' mașin' + (alertCars > 1 ? 'i' : 'ă') + ' de verificat în curând';
+    }
+    return '<div class="alert-sticky-banner alert-sticky-' + cls + '">' +
+      '<span class="alert-sticky-pulse"></span>' +
+      '<span class="alert-sticky-icon">!</span>' +
+      '<span class="alert-sticky-text">' + AA.escapeHtml(text) + '</span></div>';
+  };
+
   AA.ui._renderCarCard = function (car, id, opts) {
     opts = opts || {};
     const worst = AA.getCarWorstStatus(car);
@@ -41,9 +78,15 @@
       const svc = car.services[sid];
       const d = AA.getServiceDetail(svc, car);
       if (d.status === 'ok' && !opts.showAllServices) return '';
-      return '<div class="svc-row status-' + d.status + '">' +
+      const chip = d.status !== 'ok'
+        ? '<span class="svc-status-chip svc-status-chip-' + d.status + '">' + AA.STATUS_LABELS[d.status] + '</span>'
+        : '';
+      return '<div class="svc-row status-' + d.status + (d.status !== 'ok' ? ' svc-row-hot' : '') + '">' +
         '<div class="svc-row-main">' +
+        '<div class="svc-row-top">' +
         '<span class="svc-label">' + AA.ui._svcBubble(svc.type, 28) + '<span>' + AA.escapeHtml(d.label) + '</span></span>' +
+        chip +
+        '</div>' +
         '<span class="svc-meta">' + AA.escapeHtml(d.summary) + '</span>' +
         AA.ui._progressBar(d.progress, d.status) +
         '</div></div>';
@@ -58,6 +101,7 @@
 
     return '<div class="car-card' + (isAlert ? ' car-card-hot car-card-hot-' + worst : ' car-card-ok') +
       ' status-border-' + worst + ' card-glow-' + worst + '" data-car="' + id + '" style="--car-accent:' + accent + '">' +
+      (isAlert ? '<div class="car-card-corner car-card-corner-' + worst + '"></div>' : '') +
       ribbon +
       '<div class="car-card-stripe car-card-stripe-' + worst + '"></div>' +
       '<div class="car-card-body">' +
@@ -192,7 +236,7 @@
     root.innerHTML =
       AA.ui._renderHeader(st) +
       '<main id="mainContent">' + AA.ui._renderView(st) + '</main>' +
-      AA.ui._renderNav() +
+      AA.ui._renderNav(st) +
       (_modal ? AA.ui._renderModal() : '');
 
     AA.ui._bindMain(st);
@@ -346,15 +390,20 @@
       '</header>';
   };
 
-  AA.ui._renderNav = function () {
+  AA.ui._renderNav = function (st) {
+    const alertCars = AA.ui._countAlertCars(st.cars);
+    const fleetWorst = AA.ui._worstFleetStatus(st.cars);
     const items = [
       { id: 'dashboard', label: 'Acasă', icon: 'home' },
       { id: 'cars', label: 'Mașini', icon: 'car' },
       { id: 'family', label: 'Familie', icon: 'family' }
     ];
     return '<nav class="bottom-nav">' + items.map(function (it) {
+      const badge = (it.id === 'cars' && alertCars)
+        ? '<span class="nav-badge nav-badge-' + fleetWorst + '">' + alertCars + '</span>'
+        : '';
       return '<button class="nav-btn' + (_view === it.id ? ' active' : '') + '" data-nav="' + it.id + '">' +
-        '<span class="nav-icon">' + AA.ui._svcIcon(it.icon, 22) + '</span>' + it.label + '</button>';
+        '<span class="nav-icon">' + AA.ui._svcIcon(it.icon, 22) + badge + '</span>' + it.label + '</button>';
     }).join('') + '</nav>';
   };
 
@@ -373,8 +422,13 @@
     });
 
     const okCount = Object.keys(st.cars || {}).length;
+    const alertIds = carIds.filter(function (id) { return AA.getCarWorstStatus(st.cars[id]) !== 'ok'; });
+    const okIds = carIds.filter(function (id) { return AA.getCarWorstStatus(st.cars[id]) === 'ok'; });
+    const alertCars = alertIds.length;
+
     const hero = AA.ui._dashHero(st, agg);
-    const banner = hero +
+    const sticky = AA.ui._renderAlertSticky(agg, alertCars);
+    const banner = sticky + hero +
       '<div class="stats-row">' +
       '<div class="stat-pill stat-danger' + (agg.expired ? ' active' : '') + '">' +
       '<span class="stat-num">' + agg.expired + '</span><span class="stat-lbl">Expirate</span></div>' +
@@ -385,9 +439,6 @@
       '</div>' +
       ((agg.expired || agg.urgent || agg.warning) ? '' :
         '<div class="status-banner ok">' + AA.ui._svcIcon('check', 16) + ' Toate cele ' + okCount + ' mașini sunt în regulă</div>');
-
-    const alertIds = carIds.filter(function (id) { return AA.getCarWorstStatus(st.cars[id]) !== 'ok'; });
-    const okIds = carIds.filter(function (id) { return AA.getCarWorstStatus(st.cars[id]) === 'ok'; });
 
     const alertCards = alertIds.map(function (id) {
       return AA.ui._renderCarCard(st.cars[id], id);
@@ -404,8 +455,13 @@
         '<div class="car-alert-zone">' + alertCards + '</div>';
     }
     if (okIds.length) {
-      sections += '<div class="section-title section-title-ok">În regulă (' + okIds.length + ')</div>' +
-        '<div class="car-ok-zone">' + okCards + '</div>';
+      const okHidden = alertIds.length > 0 && _okCollapsed;
+      sections += '<button type="button" class="section-title section-title-ok section-toggle' +
+        (okHidden ? ' is-collapsed' : '') + '" id="toggleOkCars">' +
+        '<span>În regulă (' + okIds.length + ')</span>' +
+        '<span class="section-toggle-hint">' + (okHidden ? 'Arată' : 'Ascunde') + '</span>' +
+        '<span class="section-toggle-icon">' + (okHidden ? '▸' : '▾') + '</span></button>' +
+        '<div class="car-ok-zone' + (okHidden ? ' is-collapsed' : '') + '">' + okCards + '</div>';
     }
 
     return banner + sections +
@@ -427,17 +483,22 @@
       const counts = AA.ui._countCarAlerts(car);
       const isAlert = worst !== 'ok';
       const accent = AA.ui._carColor(car);
-      return '<div class="list-card' + (isAlert ? ' list-card-hot list-card-hot-' + worst : '') + '" data-car="' + id + '" style="--car-accent:' + accent + '">' +
+      const alertPill = isAlert
+        ? '<span class="list-alert-pill list-alert-pill-' + worst + '">' + AA.STATUS_LABELS[worst] + '</span>'
+        : '<span class="status-dot status-dot-lg status-dot-' + worst + '"></span>';
+      return '<div class="list-card' + (isAlert ? ' list-card-hot list-card-hot-' + worst : '') +
+        ' status-border-' + worst + '" data-car="' + id + '" style="--car-accent:' + accent + '">' +
+        (isAlert ? '<div class="list-card-bar list-card-bar-' + worst + '"></div>' : '') +
         '<div class="list-card-stripe list-card-stripe-' + worst + '"></div>' +
         '<div class="car-thumb car-thumb-sm' + (isAlert ? ' car-thumb-pulse' : '') + '" style="background:' + accent + '22;border-color:' + accent + '55">' +
         AA.ui._svcIcon('car', 18) + '</div>' +
         '<div class="list-card-info">' +
-        '<div class="plate-chip mono' + (isAlert ? ' plate-chip-alert' : '') + '">' + AA.escapeHtml(car.plate) + '</div>' +
+        '<div class="plate-chip mono' + (isAlert ? ' plate-chip-alert plate-chip-alert-' + worst : '') + '">' + AA.escapeHtml(car.plate) + '</div>' +
         '<div class="list-sub">' + AA.escapeHtml((car.brand || '') + ' ' + (car.model || '')) +
         ' · ' + AA.formatKm(car.currentKm) +
         (isAlert ? ' · <span class="list-alert-count">' + AA.escapeHtml(AA.ui._alertCountLabel(counts)) + '</span>' : '') +
         '</div></div>' +
-        '<span class="status-dot status-dot-lg status-dot-' + worst + (isAlert ? ' status-dot-pulse' : '') + '"></span></div>';
+        alertPill + '</div>';
     }).join('') + '<button class="fab" id="fabAddCar">+</button>';
   };
 
@@ -723,6 +784,12 @@
       });
       const fab = document.getElementById('fabAddCar');
       if (fab) fab.onclick = function () { AA.showToast('Disponibil după configurare Firebase', 'info'); };
+      const toggleOkDemo = document.getElementById('toggleOkCars');
+      if (toggleOkDemo) toggleOkDemo.onclick = function (e) {
+        e.stopPropagation();
+        _okCollapsed = !_okCollapsed;
+        AA.ui.render();
+      };
       if (_view === 'car-detail') AA.ui._bindCarDetailDemo(st);
       if (_view === 'family') { /* render only */ }
       if (_view === 'settings') AA.ui._bindSettingsDemo(st);
@@ -741,6 +808,13 @@
 
     const fab = document.getElementById('fabAddCar');
     if (fab) fab.onclick = function () { AA.ui.openModal('car'); };
+
+    const toggleOk = document.getElementById('toggleOkCars');
+    if (toggleOk) toggleOk.onclick = function (e) {
+      e.stopPropagation();
+      _okCollapsed = !_okCollapsed;
+      AA.ui.render();
+    };
 
     if (_view === 'car-detail') AA.ui._bindCarDetail(st);
     if (_view === 'family') AA.ui._bindFamily(st);
