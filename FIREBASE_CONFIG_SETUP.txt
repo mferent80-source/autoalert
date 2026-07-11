@@ -1,0 +1,19 @@
+firebase-config.js — NU e în Git (securitate)
+==============================================
+
+Fișierul rămâne DOAR pe PC-ul tău: AutoAlert/firebase-config.js
+Copiază din firebase-config.example.js dacă lipsește.
+
+GitHub Pages (site live):
+-------------------------
+1. GitHub → repo autoalert → Settings → Secrets → Actions
+2. New secret: AA_FIREBASE_CONFIG_JS
+3. Valoare = conținutul COMPLET al firebase-config.js (tot fișierul)
+4. Settings → Pages → Source: GitHub Actions
+5. La push pe master, workflow-ul injectează config-ul la deploy
+
+Fără secret, site-ul folosește example.js (login nu merge).
+
+Local:
+------
+firebase-config.js trebuie să existe în folder înainte de test în browser.

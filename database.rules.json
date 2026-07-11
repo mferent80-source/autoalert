@@ -13,16 +13,29 @@
       }
     },
 
+    "inviteCodes": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((!data.exists() && newData.isString() && root.child('families').child(newData.val()).child('ownerUid').val() === auth.uid) || (data.exists() && !newData.exists() && root.child('families').child(data.val()).child('ownerUid').val() === auth.uid))",
+        ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 40)"
+      }
+    },
+
     "families": {
-      ".read": "auth != null",
-      ".indexOn": ["inviteCode"],
+      ".read": false,
+      ".write": false,
+
       "$familyId": {
         ".read": "auth != null && root.child('families').child($familyId).child('members').child(auth.uid).exists()",
         ".write": "auth != null && (root.child('families').child($familyId).child('members').child(auth.uid).exists() || (!data.exists() && newData.child('ownerUid').val() === auth.uid))",
 
         "name": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80" },
-        "inviteCode": { ".validate": "newData.isString() && newData.val().length === 6" },
-        "ownerUid": { ".validate": "newData.isString()" },
+        "inviteCode": {
+          ".validate": "newData.isString() && newData.val().length === 6 && (!data.exists() || newData.val() === data.val() || root.child('families').child($familyId).child('ownerUid').val() === auth.uid)"
+        },
+        "ownerUid": {
+          ".validate": "(!data.exists() && newData.val() === auth.uid) || (data.exists() && newData.val() === data.val())"
+        },
         "createdAt": { ".validate": "newData.isNumber()" },
 
         "members": {

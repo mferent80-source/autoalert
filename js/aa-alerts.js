@@ -209,6 +209,9 @@
       svc.intervalKm = meta.defaultIntervalKm || 10000;
       if (meta.warnKmBefore != null) svc.warnKmBefore = meta.warnKmBefore;
     }
+    if (meta.warnDaysBefore && (meta.mode === 'date' || meta.mode === 'both')) {
+      svc.warnDaysBefore = meta.warnDaysBefore.slice();
+    }
     return AA.cleanRtdb(svc);
   };
 

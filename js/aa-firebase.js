@@ -46,7 +46,49 @@
   };
 
   AA.fb.getState = function () {
-    return Object.assign({}, _state);
+    return {
+      ready: _state.ready,
+      configured: _state.configured,
+      user: _state.user ? Object.assign({}, _state.user) : null,
+      familyId: _state.familyId,
+      family: _state.family ? Object.assign({}, _state.family) : null,
+      members: Object.assign({}, _state.members),
+      cars: JSON.parse(JSON.stringify(_state.cars || {})),
+      offline: _state.offline,
+      demo: _state.demo
+    };
+  };
+
+  AA.fb._syncInviteIndex = function (familyId, inviteCode) {
+    if (!_user || !_db || !AA.fb._api) return;
+    if (!familyId || !inviteCode) return;
+    if (!_state.family || _state.family.ownerUid !== _user.uid) return;
+    const { ref, get, set } = AA.fb._api;
+    const idxRef = ref(_db, 'inviteCodes/' + inviteCode);
+    get(idxRef).then(function (snap) {
+      if (!snap.exists() || snap.val() !== familyId) {
+        return set(idxRef, familyId);
+      }
+    }).catch(function () {});
+  };
+
+  AA.fb._removeInviteIndex = async function (inviteCode) {
+    if (!_db || !AA.fb._api || !inviteCode) return;
+    const { ref, remove } = AA.fb._api;
+    await remove(ref(_db, 'inviteCodes/' + inviteCode));
+  };
+
+  AA.fb._uniqueInviteCode = async function () {
+    const { ref, get } = AA.fb._api;
+    let code = AA.genInviteCode();
+    let attempts = 0;
+    while (attempts < 12) {
+      const snap = await get(ref(_db, 'inviteCodes/' + code));
+      if (!snap.exists()) return code;
+      code = AA.genInviteCode();
+      attempts++;
+    }
+    throw new Error('Nu s-a putut genera un cod unic. Încearcă din nou.');
   };
 
   AA.fb.init = async function () {
@@ -157,6 +199,7 @@
         members: _state.members,
         cars: _state.cars
       });
+      AA.fb._syncInviteIndex(familyId, val.inviteCode);
       emit();
     }, function (err) {
       console.error('RTDB error', err);
@@ -220,22 +263,9 @@
 
   AA.fb.createFamily = async function (name) {
     if (!_user) throw new Error('Neautentificat');
-    const { ref, set, get, query, orderByChild, equalTo } = AA.fb._api;
+    const { ref, set } = AA.fb._api;
     const familyId = AA.genId();
-    let code = AA.genInviteCode();
-    let attempts = 0;
-    while (attempts < 8) {
-      try {
-        const q = query(ref(_db, 'families'), orderByChild('inviteCode'), equalTo(code));
-        const existing = await get(q);
-        if (!existing.exists()) break;
-        code = AA.genInviteCode();
-        attempts++;
-      } catch (e) {
-        if (/PERMISSION_DENIED/i.test((e && e.message) || '')) break;
-        throw e;
-      }
-    }
+    const code = await AA.fb._uniqueInviteCode();
     const now = Date.now();
     const familyData = {
       name: String(name || 'Familia mea').slice(0, 80),
@@ -253,6 +283,7 @@
     };
     try {
       await set(ref(_db, 'families/' + familyId), familyData);
+      await set(ref(_db, 'inviteCodes/' + code), familyId);
       await AA.fb._writeUser(_user.uid, {
         familyId: familyId,
         displayName: _state.user.displayName,
@@ -267,17 +298,17 @@
 
   AA.fb.joinFamily = async function (code) {
     if (!_user) throw new Error('Neautentificat');
-    const { ref, get, update, query, orderByChild, equalTo } = AA.fb._api;
+    const { ref, get, update } = AA.fb._api;
     const normalized = String(code || '').trim().toUpperCase();
     if (normalized.length !== 6) throw new Error('Cod invalid');
 
-    const q = query(ref(_db, 'families'), orderByChild('inviteCode'), equalTo(normalized));
-    const snap = await get(q);
-    if (!snap.exists()) throw new Error('Cod negăsit');
-
-    let familyId = null;
-    snap.forEach(function (child) { familyId = child.key; });
+    const idxSnap = await get(ref(_db, 'inviteCodes/' + normalized));
+    if (!idxSnap.exists()) throw new Error('Cod negăsit');
+    const familyId = idxSnap.val();
     if (!familyId) throw new Error('Cod negăsit');
+
+    const famSnap = await get(ref(_db, 'families/' + familyId));
+    if (!famSnap.exists()) throw new Error('Familie negăsită — cod expirat');
 
     try {
       await update(ref(_db, 'families/' + familyId + '/members/' + _user.uid), {
@@ -299,25 +330,38 @@
 
   AA.fb.leaveFamily = async function () {
     if (!_user || !_state.familyId) return;
-    const { ref, remove, update } = AA.fb._api;
+    const { ref, remove } = AA.fb._api;
     const fid = _state.familyId;
     const isOwner = _state.family && _state.family.ownerUid === _user.uid;
+    const inviteCode = _state.family ? _state.family.inviteCode : null;
+    const memberIds = Object.keys(_state.members || {});
 
     if (isOwner) {
+      if (inviteCode) {
+        try { await AA.fb._removeInviteIndex(inviteCode); } catch (_) {}
+      }
       await remove(ref(_db, 'families/' + fid));
+      for (let i = 0; i < memberIds.length; i++) {
+        await remove(ref(_db, 'users/' + memberIds[i] + '/familyId'));
+      }
     } else {
       await remove(ref(_db, 'families/' + fid + '/members/' + _user.uid));
+      await remove(ref(_db, 'users/' + _user.uid + '/familyId'));
     }
-    await remove(ref(_db, 'users/' + _user.uid + '/familyId'));
     localStorage.removeItem(AA.LS.cachePrefix + fid);
   };
 
   AA.fb.regenerateInvite = async function () {
     if (!_user || !_state.familyId) throw new Error('Fără familie');
     if (_state.family.ownerUid !== _user.uid) throw new Error('Doar owner-ul poate regenera codul');
-    const code = AA.genInviteCode();
-    const { ref, update } = AA.fb._api;
+    const { ref, set, update } = AA.fb._api;
+    const oldCode = _state.family.inviteCode;
+    const code = await AA.fb._uniqueInviteCode();
+    if (oldCode) {
+      try { await AA.fb._removeInviteIndex(oldCode); } catch (_) {}
+    }
     await update(ref(_db, 'families/' + _state.familyId), { inviteCode: code });
+    await set(ref(_db, 'inviteCodes/' + code), _state.familyId);
     return code;
   };
 

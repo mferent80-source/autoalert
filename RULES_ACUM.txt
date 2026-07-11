@@ -1,14 +1,18 @@
-FIX "ACCESS DENIED" la creare familie
-======================================
+REGULI RTDB — AutoAlert v1.5.0
+================================
 
-Deschide (proiect autoalert-89b80):
-https://console.firebase.google.com/project/autoalert-89b80/database/autoalert-89b80-default-rtdb/rules
+1. Deschide:
+   https://console.firebase.google.com/project/autoalert-89b80/database/autoalert-89b80-default-rtdb/rules
 
-Sterge TOT. Lipeste TOT fisierul database.rules.json din folderul AutoAlert.
+2. Șterge tot. Lipește întreg fișierul database.rules.json din folderul AutoAlert.
 
-IMPORTANT: la "families" trebuie sa existe linia:
-  ".read": "auth != null",
+3. Apasă PUBLISH.
 
-Apasa PUBLISH.
+SAU: push pe master cu database.rules.json — GitHub Action deployează automat dacă secretul FIREBASE_TOKEN e setat.
 
-Apoi reincarca app-ul (Ctrl+Shift+R) si incearca din nou Creeaza familie.
+IMPORTANT v1.5.0:
+- families NU mai are ".read": "auth != null" (securitate)
+- join cu cod folosește nodul inviteCodes/{COD}
+- La prima deschidere după update, OWNER-ul sincronizează automat indexul inviteCodes
+
+După publish: Ctrl+Shift+R în app.

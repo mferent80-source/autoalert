@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <title>AutoAlert</title>
-  <link rel="stylesheet" href="css/aa-v1.0.css?v=1.4.5">
+  <link rel="stylesheet" href="css/aa-v1.0.css?v=1.5.0">
 </head>
 <body>
   <div id="splash" class="splash">
@@ -36,19 +36,19 @@
   <div id="app"></div>
   <div id="toastContainer"></div>
 
-  <script src="firebase-config.js?v=1.4.5" onerror="console.warn('firebase-config.js lipsă — copiază din firebase-config.example.js')"></script>
-  <script src="js/aa-core.js?v=1.4.5"></script>
-  <script src="js/aa-icons.js?v=1.4.5"></script>
-  <script src="js/aa-alerts.js?v=1.4.5"></script>
-  <script src="js/aa-firebase.js?v=1.4.5"></script>
-  <script src="js/aa-cars.js?v=1.4.5"></script>
-  <script src="js/aa-notifications.js?v=1.4.5"></script>
-  <script src="js/aa-export.js?v=1.4.5"></script>
-  <script src="js/aa-ui.js?v=1.4.5"></script>
+  <script src="firebase-config.js?v=1.5.0" onerror="console.warn('firebase-config.js lipsă — copiază din firebase-config.example.js')"></script>
+  <script src="js/aa-core.js?v=1.5.0"></script>
+  <script src="js/aa-icons.js?v=1.5.0"></script>
+  <script src="js/aa-alerts.js?v=1.5.0"></script>
+  <script src="js/aa-firebase.js?v=1.5.0"></script>
+  <script src="js/aa-cars.js?v=1.5.0"></script>
+  <script src="js/aa-notifications.js?v=1.5.0"></script>
+  <script src="js/aa-export.js?v=1.5.0"></script>
+  <script src="js/aa-ui.js?v=1.5.0"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./service-worker.js?v=1.4.5').catch(function (e) {
+        navigator.serviceWorker.register('./service-worker.js?v=1.5.0').catch(function (e) {
           console.warn('SW register failed', e);
         });
       });
