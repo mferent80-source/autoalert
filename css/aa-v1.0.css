@@ -423,9 +423,139 @@ body::before {
   height: 3px;
   background: linear-gradient(90deg, var(--car-accent, var(--accent)), transparent 80%);
 }
-.card-glow-expired { box-shadow: 0 4px 24px rgba(248,113,113,.15); }
-.card-glow-urgent { box-shadow: 0 4px 24px rgba(251,146,60,.15); }
-.card-glow-warning { box-shadow: 0 4px 20px rgba(251,191,36,.1); }
+.card-glow-expired { box-shadow: 0 4px 28px rgba(248,113,113,.35), 0 0 0 1px rgba(248,113,113,.25); }
+.card-glow-urgent { box-shadow: 0 4px 28px rgba(251,146,60,.32), 0 0 0 1px rgba(251,146,60,.22); }
+.card-glow-warning { box-shadow: 0 4px 24px rgba(251,191,36,.22), 0 0 0 1px rgba(251,191,36,.18); }
+
+.car-card-hot { border-width: 2px; }
+.car-card-hot-expired {
+  border-color: rgba(248,113,113,.65);
+  background: linear-gradient(145deg, #1a1214 0%, #151820 100%);
+  animation: alertPulseExpired 2.5s ease-in-out infinite;
+}
+.car-card-hot-urgent {
+  border-color: rgba(251,146,60,.6);
+  background: linear-gradient(145deg, #1a1612 0%, #151820 100%);
+  animation: alertPulseUrgent 3s ease-in-out infinite;
+}
+.car-card-hot-warning { border-color: rgba(251,191,36,.5); }
+.car-card-ok { opacity: 0.88; }
+.car-card-ok:hover { opacity: 1; }
+
+@keyframes alertPulseExpired {
+  0%, 100% { box-shadow: 0 4px 28px rgba(248,113,113,.35), 0 0 0 1px rgba(248,113,113,.3); }
+  50% { box-shadow: 0 6px 36px rgba(248,113,113,.55), 0 0 0 2px rgba(248,113,113,.45); }
+}
+@keyframes alertPulseUrgent {
+  0%, 100% { box-shadow: 0 4px 28px rgba(251,146,60,.32); }
+  50% { box-shadow: 0 6px 32px rgba(251,146,60,.48); }
+}
+
+.car-card-stripe-expired { height: 5px; background: linear-gradient(90deg, #f87171, #fb923c 60%, transparent); }
+.car-card-stripe-urgent { height: 5px; background: linear-gradient(90deg, #fb923c, #fbbf24 70%, transparent); }
+.car-card-stripe-warning { height: 4px; background: linear-gradient(90deg, #fbbf24, transparent 80%); }
+.list-card-stripe-expired { height: 4px; background: #f87171; }
+.list-card-stripe-urgent { height: 4px; background: #fb923c; }
+.list-card-stripe-warning { height: 3px; background: #fbbf24; }
+
+.car-alert-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.car-alert-ribbon-expired { background: rgba(248,113,113,.22); color: #fecaca; border-bottom: 1px solid rgba(248,113,113,.35); }
+.car-alert-ribbon-urgent { background: rgba(251,146,60,.2); color: #fed7aa; border-bottom: 1px solid rgba(251,146,60,.3); }
+.car-alert-ribbon-warning { background: rgba(251,191,36,.15); color: #fef08a; border-bottom: 1px solid rgba(251,191,36,.25); }
+.car-alert-ribbon-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: currentColor;
+  color: #1a0a0a;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.plate-chip-alert {
+  color: #fff;
+  background: rgba(248,113,113,.15);
+  border: 1px solid rgba(248,113,113,.4);
+  box-shadow: 0 0 12px rgba(248,113,113,.2);
+}
+.car-card-hot-urgent .plate-chip-alert {
+  background: rgba(251,146,60,.15);
+  border-color: rgba(251,146,60,.4);
+  box-shadow: 0 0 12px rgba(251,146,60,.2);
+}
+
+.badge-pulse { animation: badgePulse 2s ease-in-out infinite; }
+@keyframes badgePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+.car-thumb-pulse { animation: thumbGlow 2.5s ease-in-out infinite; }
+@keyframes thumbGlow {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.25); }
+}
+
+.list-card-hot {
+  border-width: 2px;
+  padding: 14px 16px;
+}
+.list-card-hot-expired { border-color: rgba(248,113,113,.55); background: linear-gradient(145deg, #1a1214, #12151c); }
+.list-card-hot-urgent { border-color: rgba(251,146,60,.5); }
+.list-card-hot-warning { border-color: rgba(251,191,36,.4); }
+.list-alert-count { color: #fdba74; font-weight: 600; }
+
+.status-dot-lg { width: 14px; height: 14px; }
+.status-dot-pulse { animation: dotPulse 1.8s ease-in-out infinite; }
+@keyframes dotPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.85; }
+}
+
+.section-title-alert {
+  color: #fecaca;
+  font-size: 14px;
+  margin-top: 20px;
+}
+.section-title-alert .section-alert-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px; height: 22px;
+  margin-right: 6px;
+  background: rgba(248,113,113,.25);
+  border-radius: 6px;
+  color: #f87171;
+}
+.section-title-ok { color: var(--txt2); font-size: 13px; margin-top: 18px; }
+.car-alert-zone { margin-bottom: 8px; }
+.car-ok-zone .car-card { transform: scale(0.98); }
+
+.svc-card-hot { border-width: 2px; }
+.svc-card-hot.status-border-expired { background: rgba(248,113,113,.04); }
+
+.reminder-chip {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(96,165,250,.15);
+  color: #93c5fd;
+  border: 1px solid rgba(96,165,250,.3);
+}
 .car-card:hover, .list-card:hover {
   border-color: var(--border2);
   transform: translateY(-2px);

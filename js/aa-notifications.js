@@ -6,6 +6,7 @@
   AA.notif = AA.notif || {};
   let _interval = null;
   let _liveInterval = null;
+  let _customInterval = null;
   let _audioCtx = null;
 
   AA.notif.isEnabled = function () {
@@ -237,6 +238,55 @@
     }
   };
 
+  AA.notif.checkCustomReminders = async function () {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const cars = (AA.fb.getState().cars) || {};
+    const today = AA.todayStr();
+    const now = new Date();
+    const hm = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+
+    const carIds = Object.keys(cars);
+    for (let ci = 0; ci < carIds.length; ci++) {
+      const carId = carIds[ci];
+      const car = cars[carId];
+      const sids = Object.keys(car.services || {});
+      for (let si = 0; si < sids.length; si++) {
+        const sid = sids[si];
+        const svc = car.services[sid];
+        if (!svc.reminderAt) continue;
+        if (svc.reminderFired === svc.reminderAt) continue;
+        const localKey = 'aa_rem_fired_' + carId + '_' + sid;
+        if (localStorage.getItem(localKey) === svc.reminderAt) continue;
+
+        const parts = AA.splitReminderAt(svc.reminderAt);
+        if (parts.date !== today || parts.time !== hm) continue;
+
+        const meta = AA.SERVICE_TYPES[svc.type] || { label: svc.type };
+        const d = AA.getServiceDetail(svc, car);
+        let body = car.plate + ' · ' + meta.label;
+        if (svc.reminderNote) body = svc.reminderNote + '\n' + body;
+        body += '\n' + d.summary;
+
+        new Notification('⏰ Reminder AutoAlert', {
+          body: body,
+          icon: './icon-192.png',
+          badge: './icon-192.png',
+          tag: 'aa-custom-' + carId + '-' + sid,
+          data: { url: './index.html?action=km' }
+        });
+        AA.notif.vibrateAlert(d.status === 'expired');
+        AA.notif.playAlertSound(d.status === 'expired' || d.status === 'urgent');
+
+        localStorage.setItem(localKey, svc.reminderAt);
+        if (AA.cars && AA.cars.updateService) {
+          try {
+            await AA.cars.updateService(carId, sid, { reminderFired: svc.reminderAt });
+          } catch (_) { /* localStorage fallback */ }
+        }
+      }
+    }
+  };
+
   AA.notif._pingServiceWorker = function () {
     if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) return;
     navigator.serviceWorker.controller.postMessage({ type: 'AA_CHECK_ALERTS' });
@@ -261,6 +311,12 @@
     AA.notif.checkMorning();
     AA.notif.checkEvening();
     if (AA.notif.isLiveEnabled()) AA.notif._startLiveWatcher();
+    AA.notif.checkCustomReminders();
+    if (!_customInterval) {
+      _customInterval = setInterval(function () {
+        AA.notif.checkCustomReminders();
+      }, 60 * 1000);
+    }
     _interval = setInterval(function () {
       AA.notif.checkMorning();
       AA.notif.checkEvening();
@@ -270,6 +326,7 @@
         AA.notif.checkMorning();
         AA.notif.checkEvening();
         AA.notif.checkLive();
+        AA.notif.checkCustomReminders();
       }
     });
   };

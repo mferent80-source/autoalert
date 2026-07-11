@@ -91,6 +91,17 @@
     if (patch.notes != null) allowed.notes = String(patch.notes).slice(0, 500);
     if (patch.cost != null && patch.cost !== '') allowed.cost = numVal(patch.cost, 0);
     if (patch.mode != null) allowed.mode = patch.mode;
+    if (patch.reminderAt === null) {
+      allowed.reminderAt = null;
+      allowed.reminderFired = null;
+    } else if (patch.reminderAt != null && patch.reminderAt !== '') {
+      allowed.reminderAt = String(patch.reminderAt).slice(0, 16);
+      allowed.reminderFired = null;
+    }
+    if (patch.reminderFired != null && patch.reminderFired !== '' && patch.reminderAt == null) {
+      allowed.reminderFired = String(patch.reminderFired).slice(0, 16);
+    }
+    if (patch.reminderNote != null) allowed.reminderNote = String(patch.reminderNote).slice(0, 200);
     try {
       await AA.fb.updateFamilyData('cars/' + carId + '/services/' + sid, allowed);
     } catch (e) {

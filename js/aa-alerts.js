@@ -151,6 +151,33 @@
     return { expired: expired, urgent: urgent, warning: warning, items: items };
   };
 
+  AA.formatReminderAt = function (dateStr, timeStr) {
+    if (!dateStr) return null;
+    const t = String(timeStr || '09:00').slice(0, 5);
+    if (!/^\d{2}:\d{2}$/.test(t)) return null;
+    return String(dateStr).slice(0, 10) + 'T' + t;
+  };
+
+  AA.splitReminderAt = function (reminderAt) {
+    if (!reminderAt) return { date: '', time: '09:00' };
+    const p = String(reminderAt).split('T');
+    return { date: p[0] || '', time: (p[1] || '09:00').slice(0, 5) };
+  };
+
+  AA.formatReminderDisplay = function (reminderAt) {
+    if (!reminderAt) return '';
+    const p = AA.splitReminderAt(reminderAt);
+    return AA.formatDate(p.date) + ' · ' + p.time;
+  };
+
+  AA.isReminderActive = function (reminderAt) {
+    if (!reminderAt) return false;
+    const p = AA.splitReminderAt(reminderAt);
+    const today = AA.todayStr();
+    if (p.date < today) return false;
+    return true;
+  };
+
   AA.defaultService = function (type) {
     const meta = AA.SERVICE_TYPES[type];
     if (!meta) return null;

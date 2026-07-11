@@ -70,7 +70,10 @@
                 "notes": { ".validate": "newData.isString() && newData.val().length <= 500" },
                 "cost": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000" },
                 "createdAt": { ".validate": "newData.isNumber()" },
-                "updatedAt": { ".validate": "newData.isNumber()" }
+                "updatedAt": { ".validate": "newData.isNumber()" },
+                "reminderAt": { ".validate": "!newData.exists() || (newData.isString() && newData.val().length >= 11 && newData.val().length <= 16)" },
+                "reminderNote": { ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 200)" },
+                "reminderFired": { ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 16)" }
               }
             },
 
