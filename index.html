@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0d0f12">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <title>AutoAlert</title>
+  <link rel="stylesheet" href="css/aa-v1.0.css">
+</head>
+<body>
+  <div id="app"></div>
+  <div id="toastContainer"></div>
+
+  <script src="firebase-config.js" onerror="console.warn('firebase-config.js lipsă — copiază din firebase-config.example.js')"></script>
+  <script src="js/aa-core.js"></script>
+  <script src="js/aa-alerts.js"></script>
+  <script src="js/aa-firebase.js"></script>
+  <script src="js/aa-cars.js"></script>
+  <script src="js/aa-notifications.js"></script>
+  <script src="js/aa-ui.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('./service-worker.js').catch(function (e) {
+          console.warn('SW register failed', e);
+        });
+      });
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+      AA.ui.init();
+    });
+  </script>
+</body>
+</html>

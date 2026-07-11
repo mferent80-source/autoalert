@@ -1,0 +1,85 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        "familyId": { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "displayName": { ".validate": "newData.isString() && newData.val().length <= 120" },
+        "email": { ".validate": "newData.isString() && newData.val().length <= 200" }
+      }
+    },
+
+    "families": {
+      ".indexOn": ["inviteCode"],
+      "$familyId": {
+        ".read": "auth != null && root.child('families').child($familyId).child('members').child(auth.uid).exists()",
+        ".write": "auth != null && (root.child('families').child($familyId).child('members').child(auth.uid).exists() || (!data.exists() && newData.child('ownerUid').val() === auth.uid))",
+
+        "name": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80" },
+        "inviteCode": { ".validate": "newData.isString() && newData.val().length === 6" },
+        "ownerUid": { ".validate": "newData.isString()" },
+        "createdAt": { ".validate": "newData.isNumber()" },
+
+        "members": {
+          "$memberUid": {
+            ".write": "auth != null && (auth.uid === $memberUid || root.child('families').child($familyId).child('ownerUid').val() === auth.uid)",
+            ".validate": "newData.hasChildren(['role', 'joinedAt']) || newData.val() == null",
+            "role": { ".validate": "newData.isString() && (newData.val() === 'owner' || newData.val() === 'member')" },
+            "joinedAt": { ".validate": "newData.isNumber()" },
+            "displayName": { ".validate": "newData.isString() && newData.val().length <= 120" }
+          }
+        },
+
+        "cars": {
+          "$carId": {
+            ".validate": "newData.hasChildren(['plate']) || newData.val() == null",
+            "plate": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 10" },
+            "brand": { ".validate": "newData.isString() && newData.val().length <= 60" },
+            "model": { ".validate": "newData.isString() && newData.val().length <= 60" },
+            "year": { ".validate": "newData.isNumber() && newData.val() >= 1970 && newData.val() <= 2100" },
+            "currentKm": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 999999" },
+            "currentKmUpdatedAt": { ".validate": "newData.isNumber()" },
+            "color": { ".validate": "newData.isString() && newData.val().length <= 20" },
+            "updatedAt": { ".validate": "newData.isNumber()" },
+            "updatedBy": { ".validate": "newData.isString()" },
+
+            "services": {
+              "$serviceId": {
+                ".validate": "newData.hasChildren(['type']) || newData.val() == null",
+                "type": {
+                  ".validate": "newData.isString() && (newData.val() === 'itp' || newData.val() === 'rca' || newData.val() === 'casco' || newData.val() === 'rovigneta' || newData.val() === 'taxa_pod' || newData.val() === 'ulei' || newData.val() === 'filtre' || newData.val() === 'distributie' || newData.val() === 'revizie' || newData.val() === 'roata_iarna' || newData.val() === 'roata_vara')"
+                },
+                "mode": { ".validate": "newData.isString() && (newData.val() === 'date' || newData.val() === 'mileage' || newData.val() === 'both')" },
+                "lastDate": { ".validate": "newData.isString() && newData.val().length <= 12" },
+                "nextDate": { ".validate": "newData.isString() && newData.val().length <= 12" },
+                "intervalDays": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 3650" },
+                "lastKm": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 999999" },
+                "intervalKm": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500000" },
+                "warnKmBefore": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 50000" },
+                "warnDaysBefore": { ".validate": "!newData.exists() || newData.hasChildren()" },
+                "notes": { ".validate": "newData.isString() && newData.val().length <= 500" },
+                "cost": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000" }
+              }
+            },
+
+            "history": {
+              "$historyId": {
+                ".validate": "newData.hasChildren(['type', 'doneDate']) || newData.val() == null",
+                "type": { ".validate": "newData.isString()" },
+                "doneDate": { ".validate": "newData.isString() && newData.val().length <= 12" },
+                "doneKm": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 999999" },
+                "cost": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000" },
+                "notes": { ".validate": "newData.isString() && newData.val().length <= 500" },
+                "doneBy": { ".validate": "newData.isString()" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
