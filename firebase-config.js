@@ -1,11 +1,10 @@
-// AutoAlert — Firebase (proiect datorietrack, RTDB europe-west1)
-// Cheia API e publică (client-side); regulile RTDB protejează datele.
+// AutoAlert — proiect Firebase dedicat: autoalert-89b80
 window.AA_FIREBASE_CONFIG = {
-  apiKey: "AIzaSyANrLY3-8fszQ8I9OfX7ae_eungz_7gxx8",
-  authDomain: "datorietrack.firebaseapp.com",
-  databaseURL: "https://datorietrack-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "datorietrack",
-  storageBucket: "datorietrack.firebasestorage.app",
-  messagingSenderId: "297453564604",
-  appId: "1:297453564604:web:3cbc7c7f25ec7f046056b9"
+  apiKey: "AIzaSyB5Wx3E5M8f0xhh4ROWkwHSqaWEHB8j-t0",
+  authDomain: "autoalert-89b80.firebaseapp.com",
+  databaseURL: "https://autoalert-89b80-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "autoalert-89b80",
+  storageBucket: "autoalert-89b80.firebasestorage.app",
+  messagingSenderId: "33727745263",
+  appId: "1:33727745263:web:f5097db2bd28c7e0621f1a"
 };
