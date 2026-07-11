@@ -94,6 +94,18 @@ body::before {
   filter: blur(40px);
 }
 .auth-card { position: relative; z-index: 1; }
+.auth-warn {
+  background: rgba(249, 115, 22, 0.12);
+  border: 1px solid rgba(249, 115, 22, 0.45);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--txt2);
+}
+.auth-warn a { color: var(--accent); }
+.auth-warn b { color: var(--txt1); }
 .auth-icon {
   font-size: 48px;
   text-align: center;

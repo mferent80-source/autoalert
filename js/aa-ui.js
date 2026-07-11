@@ -218,12 +218,17 @@
   };
 
   AA.ui._renderAuth = function () {
+    const cfg = global.AA_FIREBASE_CONFIG || {};
+    const wrongProject = cfg.projectId === 'datorietrack';
     return '<div class="auth-screen">' +
       '<div class="auth-glow"></div>' +
       '<div class="center-card auth-card">' +
       '<div class="auth-icon">' + (AA.icon ? AA.icon.render('wheel', 56) : '') + '</div>' +
       '<div class="logo">Auto<span>Alert</span></div>' +
       '<p class="muted">Alerte ITP, RCA, rovinietă, schimburi — pentru toată familia.</p>' +
+      (wrongProject
+        ? '<div class="auth-warn">Proiectul <b>datorietrack</b> e pentru DatorieTrack, nu suportă login Google pentru AutoAlert. Deschide <a href="./setup-firebase.html" target="_blank">setup-firebase.html</a> și creează proiect <b>autoalert</b>.</div>'
+        : '') +
       '<button class="btn btn-primary btn-glow" id="btnGoogle">Continuă cu Google</button>' +
       '<button class="btn btn-ghost" id="btnDemoAuth">Previzualizare demo</button>' +
       '<p class="ver">v' + AA.APP_VERSION + '</p>' +
@@ -523,7 +528,14 @@
     if (btn) btn.onclick = async function () {
       btn.disabled = true;
       try { await AA.fb.signInGoogle(); }
-      catch (e) { AA.showToast(e.message || 'Eroare login', 'error'); btn.disabled = false; }
+      catch (e) {
+        var m = e.message || 'Eroare login';
+        if ((global.AA_FIREBASE_CONFIG || {}).projectId === 'datorietrack') {
+          m = 'datorietrack nu are Google Auth. Deschide setup-firebase.html';
+        }
+        AA.showToast(m, 'error');
+        btn.disabled = false;
+      }
     };
     const demo = document.getElementById('btnDemoAuth');
     if (demo) demo.onclick = function () { AA.ui.startDemo(); };

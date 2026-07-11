@@ -1,41 +1,39 @@
-AUTOLERT - DEPLOY FARA FIREBASE CLI (3 pasi in browser)
-========================================================
+AUTOLERT - DE CE NU MERGE CU DATORIETRACK
+==========================================
 
-Firebase CLI nu merge pe PC-ul tau. Am pregatit deploy pe GitHub Pages.
+datorietrack = proiectul aplicatiei DatorieTrack (Firestore, fara Google Login).
+AutoAlert = RTDB + Google Sign-In + alt model de date.
+
+NU folosi linkurile Firebase pentru datorietrack la AutoAlert!
+Creeaza proiect NOU separat.
 
 
-PASUL 1 - App LIVE (GitHub Pages)
+APP LIVE (deja functionala ca UI)
 ---------------------------------
-  https://mferent80-source.github.io/autoalert/
-
-Repo: https://github.com/mferent80-source/autoalert
+https://mferent80-source.github.io/autoalert/
 
 
-PASUL 2 - Firebase Console (2 minute, doar copy-paste)
-------------------------------------------------------
-A) Google Sign-In ON:
-   https://console.firebase.google.com/project/datorietrack/authentication/providers
-   -> Google -> Enable
+SETUP FIREBASE (15 minute, doar browser)
+----------------------------------------
+1) Deschide ghidul interactiv (dublu-click in Explorer):
+   C:\Users\Cimin\AutoAlert\setup-firebase.html
 
-B) Authorized domains - adauga:
-   mferent80-source.github.io
-   (Authentication -> Settings -> Authorized domains -> Add domain)
+   SAU online dupa push:
+   https://mferent80-source.github.io/autoalert/setup-firebase.html
 
-C) Reguli RTDB - lipeste tot din fisierul:
-   database.rules.json
-   la:
-   https://console.firebase.google.com/project/datorietrack/database/datorietrack-default-rtdb/rules
-   -> Publish
-
-
-PASUL 3 - Test
---------------
-Deschide URL-ul GitHub Pages -> Conectare Google -> Creeaza familie
+2) Urmeaza pasii 1-5 din pagina:
+   - Proiect nou: autoalert
+   - Realtime Database (europe-west1) + rules din database.rules.json
+   - Google Sign-In ON
+   - Genereaza firebase-config.js
+   - Inlocuieste fisierul + push GitHub
 
 
-LOCAL (fara deploy):
-  http://localhost:8080
-  (necesita localhost in Authorized domains + Google Sign-In ON)
+DUPA CONFIG CORECT
+------------------
+https://mferent80-source.github.io/autoalert/
+-> Continua cu Google -> Creeaza familie
 
 
-Alternativa hosting: trage AutoAlert-hosting.zip pe https://app.netlify.com/drop
+DEMO (fara Firebase):
+Apasa "Previzualizare demo" pe ecranul de login.

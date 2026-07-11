@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoAlert — Setup Firebase NOU</title>
+  <style>
+    :root { --bg:#0d0f12; --card:#151820; --border:#2a3040; --txt:#e8eaef; --muted:#8b92a8; --accent:#f97316; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, sans-serif; background:var(--bg); color:var(--txt); line-height:1.5; padding:20px; }
+    .wrap { max-width:720px; margin:0 auto; }
+    h1 { color:var(--accent); font-size:1.4rem; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px; margin:16px 0; }
+    .warn { background:#3b1f0f; border-color:#f97316; }
+    ol { padding-left:1.2rem; }
+    a { color:#3b82f6; }
+    textarea, input { width:100%; background:#1c2030; border:1px solid var(--border); color:var(--txt); border-radius:8px; padding:10px; font-family:monospace; font-size:12px; }
+    textarea { min-height:140px; }
+    button { background:var(--accent); color:#fff; border:0; border-radius:8px; padding:12px 18px; font-weight:600; cursor:pointer; margin-top:10px; }
+    button:hover { filter:brightness(1.1); }
+    .ok { color:#22c55e; }
+    code { background:#1c2030; padding:2px 6px; border-radius:4px; }
+    .step { font-weight:700; color:var(--accent); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>AutoAlert — Firebase NOU (nu datorietrack!)</h1>
+
+  <div class="card warn">
+    <strong>De ce nu merge cu datorietrack?</strong>
+    <ul>
+      <li><code>datorietrack</code> = proiectul <strong>DatorieTrack</strong> (Firestore, fără Google Login)</li>
+      <li><strong>AutoAlert</strong> are nevoie de <strong>Realtime Database + Google Sign-In</strong></li>
+      <li>Amestecarea celor două apps în același proiect creează conflicte</li>
+    </ul>
+    <p><strong>Soluție:</strong> creează proiect Firebase separat numit <code>autoalert</code></p>
+  </div>
+
+  <div class="card">
+    <p class="step">Pas 1 — Proiect nou</p>
+    <ol>
+      <li>Deschide <a href="https://console.firebase.google.com/" target="_blank">Firebase Console</a></li>
+      <li><strong>Add project</strong> → nume: <code>autoalert</code></li>
+      <li>Google Analytics: opțional (poți dezactiva)</li>
+    </ol>
+
+    <p class="step">Pas 2 — Realtime Database</p>
+    <ol>
+      <li>Build → <strong>Realtime Database</strong> → Create Database</li>
+      <li>Locație: <strong>europe-west1</strong> (Belgia)</li>
+      <li>Start in <strong>locked mode</strong></li>
+      <li>Tab <strong>Rules</strong> → șterge tot → lipește conținutul din <code>database.rules.json</code> (din folderul AutoAlert) → Publish</li>
+    </ol>
+
+    <p class="step">Pas 3 — Google Sign-In</p>
+    <ol>
+      <li>Build → <strong>Authentication</strong> → Get started</li>
+      <li>Sign-in method → <strong>Google</strong> → Enable → Save</li>
+      <li>Settings → Authorized domains → verifică că există <code>mferent80-source.github.io</code> (adaugă dacă lipsește)</li>
+    </ol>
+
+    <p class="step">Pas 4 — Web App config</p>
+    <ol>
+      <li>Project settings (roată) → Your apps → <strong>&lt;/&gt; Web</strong></li>
+      <li>Nickname: <code>AutoAlert</code> → Register app</li>
+      <li>Copiază blocul <code>firebaseConfig</code> și lipește mai jos</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <p><strong>Lipește aici config-ul din Firebase Console:</strong></p>
+    <textarea id="paste" placeholder="const firebaseConfig = {
+  apiKey: &quot;...&quot;,
+  authDomain: &quot;autoalert-xxxxx.firebaseapp.com&quot;,
+  databaseURL: &quot;https://autoalert-xxxxx-default-rtdb.europe-west1.firebasedatabase.app&quot;,
+  projectId: &quot;autoalert-xxxxx&quot;,
+  ...
+};"></textarea>
+    <p class="muted">Important: <code>databaseURL</code> trebuie să existe (RTDB activat la Pas 2).</p>
+    <button type="button" id="gen">Generează firebase-config.js</button>
+    <p id="msg"></p>
+  </div>
+
+  <div class="card">
+    <p class="step">Pas 5 — Publică pe GitHub</p>
+    <ol>
+      <li>Înlocuiește <code>firebase-config.js</code> în folderul AutoAlert cu fișierul descărcat</li>
+      <li>În terminal (sau GitHub Desktop): commit + push la <a href="https://github.com/mferent80-source/autoalert" target="_blank">mferent80-source/autoalert</a></li>
+      <li>Așteaptă 1 minut → testează <a href="https://mferent80-source.github.io/autoalert/" target="_blank">app live</a></li>
+    </ol>
+  </div>
+</div>
+<script>
+document.getElementById('gen').onclick = function () {
+  var raw = document.getElementById('paste').value;
+  var msg = document.getElementById('msg');
+  var cfg = {};
+  try {
+    var json = raw.replace(/const\s+firebaseConfig\s*=\s*/, '').replace(/;\s*$/, '').trim();
+    cfg = JSON.parse(json);
+  } catch (e) {
+    msg.innerHTML = '<span style="color:#ef4444">JSON invalid. Copiază exact blocul firebaseConfig.</span>';
+    return;
+  }
+  if (!cfg.apiKey || !cfg.databaseURL || !cfg.projectId) {
+    msg.innerHTML = '<span style="color:#ef4444">Lipsesc apiKey, databaseURL sau projectId. Ai activat RTDB?</span>';
+    return;
+  }
+  var out = '// AutoAlert — proiect Firebase dedicat: ' + cfg.projectId + '\n' +
+    'window.AA_FIREBASE_CONFIG = ' + JSON.stringify(cfg, null, 2).replace(/"([^"]+)":/g, '$1:').replace(/"/g, '"') + ';\n';
+  out = '// AutoAlert — proiect Firebase dedicat: ' + cfg.projectId + '\n' +
+    'window.AA_FIREBASE_CONFIG = {\n' +
+    '  apiKey: ' + JSON.stringify(cfg.apiKey) + ',\n' +
+    '  authDomain: ' + JSON.stringify(cfg.authDomain) + ',\n' +
+    '  databaseURL: ' + JSON.stringify(cfg.databaseURL) + ',\n' +
+    '  projectId: ' + JSON.stringify(cfg.projectId) + ',\n' +
+    '  storageBucket: ' + JSON.stringify(cfg.storageBucket || '') + ',\n' +
+    '  messagingSenderId: ' + JSON.stringify(String(cfg.messagingSenderId || '')) + ',\n' +
+    '  appId: ' + JSON.stringify(cfg.appId || '') + '\n' +
+    '};\n';
+  var blob = new Blob([out], { type: 'text/javascript' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'firebase-config.js';
+  a.click();
+  msg.innerHTML = '<span class="ok">Descărcat firebase-config.js pentru proiectul <code>' + cfg.projectId + '</code></span>';
+};
+</script>
+</body>
+</html>
