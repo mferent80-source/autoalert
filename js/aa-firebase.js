@@ -258,6 +258,7 @@
     } catch (e) {
       throw new Error(AA.fb._rtdbErr(e));
     }
+    await AA.fb._loadUserFamily(_user);
     return { familyId: familyId, inviteCode: code };
   };
 
@@ -275,16 +276,21 @@
     snap.forEach(function (child) { familyId = child.key; });
     if (!familyId) throw new Error('Cod negăsit');
 
-    await update(ref(_db, 'families/' + familyId + '/members/' + _user.uid), {
-      role: 'member',
-      joinedAt: Date.now(),
-      displayName: _state.user.displayName
-    });
-    await AA.fb._writeUser(_user.uid, {
-      familyId: familyId,
-      displayName: _state.user.displayName,
-      email: _state.user.email || ''
-    });
+    try {
+      await update(ref(_db, 'families/' + familyId + '/members/' + _user.uid), {
+        role: 'member',
+        joinedAt: Date.now(),
+        displayName: _state.user.displayName
+      });
+      await AA.fb._writeUser(_user.uid, {
+        familyId: familyId,
+        displayName: _state.user.displayName,
+        email: _state.user.email || ''
+      });
+    } catch (e) {
+      throw new Error(AA.fb._rtdbErr(e));
+    }
+    await AA.fb._loadUserFamily(_user);
     return familyId;
   };
 
