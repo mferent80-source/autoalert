@@ -15,7 +15,8 @@ const SHELL_URLS = [
   './js/aa-cars.js',
   './js/aa-notifications.js',
   './js/aa-ui.js',
-  './firebase-config.example.js'
+  './firebase-config.example.js',
+  './firebase-config.js'
 ];
 
 self.addEventListener('install', function (e) {
