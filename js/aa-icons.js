@@ -7,6 +7,25 @@
 
   const COLORS = ['#f97316', '#3b82f6', '#22c55e', '#a855f7', '#ec4899', '#14b8a6'];
 
+  AA.icon.SERVICE_COLORS = {
+    itp:         { bg: 'rgba(96,165,250,.2)',  fg: '#93c5fd' },
+    rca:         { bg: 'rgba(52,211,153,.2)',  fg: '#6ee7b7' },
+    casco:       { bg: 'rgba(45,212,191,.2)',  fg: '#5eead4' },
+    rovigneta:   { bg: 'rgba(167,139,250,.2)', fg: '#c4b5fd' },
+    taxa_pod:    { bg: 'rgba(129,140,248,.2)', fg: '#a5b4fc' },
+    ulei:        { bg: 'rgba(251,146,60,.22)', fg: '#fdba74' },
+    filtre:      { bg: 'rgba(148,163,184,.2)', fg: '#cbd5e1' },
+    distributie: { bg: 'rgba(244,114,182,.2)', fg: '#f9a8d4' },
+    revizie:     { bg: 'rgba(251,191,36,.2)',  fg: '#fde68a' },
+    roata_iarna: { bg: 'rgba(56,189,248,.2)',  fg: '#7dd3fc' },
+    roata_vara:  { bg: 'rgba(252,211,77,.2)',  fg: '#fde047' },
+    check:       { bg: 'rgba(74,222,128,.2)',  fg: '#86efac' },
+    home:        { bg: 'rgba(251,146,60,.18)', fg: '#fdba74' },
+    car:         { bg: 'rgba(96,165,250,.18)', fg: '#93c5fd' },
+    family:      { bg: 'rgba(167,139,250,.18)',fg: '#c4b5fd' },
+    wheel:       { bg: 'rgba(251,146,60,.2)',  fg: '#fb923c' }
+  };
+
   const PATHS = {
     itp: '<path d="M14 6h-4V4a2 2 0 012-2h4a2 2 0 012 2v2h2v2h-2v10a2 2 0 01-2 2H8a2 2 0 01-2-2V8H4V6h2V4a2 2 0 012-2h4a2 2 0 012 2v2zm-2 0V4h-4v2h4zM8 8v10h8V8H8z" transform="scale(1.1) translate(-1 -1)"/>',
     rca: '<path d="M12 2l7 4v6c0 5-3.5 9-7 10C8.5 21 5 17 5 12V6l7-4zm0 2.2L7 7.5V12c0 3.8 2.5 7.2 5 8.2 2.5-1 5-4.4 5-8.2V7.5L12 4.2z"/>',
@@ -31,6 +50,14 @@
     cls = cls || '';
     const path = PATHS[type] || PATHS.revizie;
     return '<svg class="aa-icon ' + (cls || '') + '" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" aria-hidden="true">' + path + '</svg>';
+  };
+
+  AA.icon.bubble = function (type, size) {
+    size = size || 32;
+    const pal = AA.icon.SERVICE_COLORS[type] || AA.icon.SERVICE_COLORS.revizie;
+    const iconSize = Math.round(size * 0.52);
+    return '<span class="icon-bubble" style="width:' + size + 'px;height:' + size + 'px;background:' + pal.bg + ';color:' + pal.fg + '">' +
+      AA.icon.render(type, iconSize) + '</span>';
   };
 
   AA.icon.initials = function (name) {

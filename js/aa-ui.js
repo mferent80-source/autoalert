@@ -37,6 +37,7 @@
           model: 'Logan',
           year: 2019,
           currentKm: 87200,
+          color: '#3b82f6',
           services: {
             s1: { type: 'itp', mode: 'date', nextDate: AA.addDays(today, -3), warnDaysBefore: [30, 14, 7] },
             s2: { type: 'rca', mode: 'date', nextDate: AA.addDays(today, 12), warnDaysBefore: [30, 14] },
@@ -52,6 +53,7 @@
           model: 'Golf',
           year: 2015,
           currentKm: 156400,
+          color: '#a855f7',
           services: {
             s4: { type: 'rovigneta', mode: 'date', nextDate: AA.addDays(today, 5), warnDaysBefore: [14, 7, 3] },
             s5: { type: 'filtre', mode: 'mileage', lastKm: 151000, intervalKm: 15000, warnKmBefore: 500 }
@@ -140,8 +142,40 @@
     return '<div class="prog-track"><div class="prog-fill status-' + status + '" style="width:' + w + '%"></div></div>';
   };
 
+  AA.ui._carColor = function (car) {
+    if (car && car.color) return car.color;
+    return '#fb923c';
+  };
+
   AA.ui._svcIcon = function (type, size) {
     return AA.icon ? AA.icon.render(type, size || 18, 'svc-icon') : '';
+  };
+
+  AA.ui._svcBubble = function (type, size) {
+    return AA.icon && AA.icon.bubble ? AA.icon.bubble(type, size || 30) : AA.ui._svcIcon(type, 18);
+  };
+
+  AA.ui._dashHero = function (st, agg) {
+    const name = st.user ? st.user.displayName.split(' ')[0] : '';
+    let mood = 'alert';
+    let msg = 'Totul e în regulă — nici o alertă activă';
+    if (agg.expired) {
+      mood = 'danger';
+      msg = agg.expired + ' alertă' + (agg.expired > 1 ? 'e expirată' : ' expirată') + ' — acționează azi';
+    } else if (agg.urgent) {
+      mood = 'urgent';
+      msg = agg.urgent + ' urgent' + (agg.urgent > 1 ? 'e' : '') + ' — verifică programările';
+    } else if (agg.warning) {
+      mood = 'warn';
+      msg = agg.warning + ' în curând — planifică din timp';
+    }
+    return '<div class="dash-hero dash-hero-' + mood + '">' +
+      '<div class="dash-hero-content">' +
+      '<div class="dash-greet">Bună, ' + AA.escapeHtml(name) + '</div>' +
+      '<div class="dash-mood">' + msg + '</div>' +
+      '</div>' +
+      '<div class="dash-hero-visual">' + (AA.icon ? AA.icon.bubble('wheel', 52) : '') + '</div>' +
+      '</div>';
   };
 
   AA.ui._ring = function (svc, car, d) {
@@ -257,7 +291,8 @@
     });
 
     const okCount = Object.keys(st.cars || {}).length;
-    const banner =
+    const hero = AA.ui._dashHero(st, agg);
+    const banner = hero +
       '<div class="stats-row">' +
       '<div class="stat-pill stat-danger' + (agg.expired ? ' active' : '') + '">' +
       '<span class="stat-num">' + agg.expired + '</span><span class="stat-lbl">Expirate</span></div>' +
@@ -278,22 +313,27 @@
         if (d.status === 'ok') return '';
         return '<div class="svc-row status-' + d.status + '">' +
           '<div class="svc-row-main">' +
-          '<span class="svc-label">' + AA.ui._svcIcon(svc.type) + ' ' + AA.escapeHtml(d.label) + '</span>' +
+          '<span class="svc-label">' + AA.ui._svcBubble(svc.type, 28) + '<span>' + AA.escapeHtml(d.label) + '</span></span>' +
           '<span class="svc-meta">' + AA.escapeHtml(d.summary) + '</span>' +
           AA.ui._progressBar(d.progress, d.status) +
           '</div></div>';
       }).filter(Boolean).join('');
 
-      return '<div class="car-card status-border-' + worst + '" data-car="' + id + '">' +
+      const accent = AA.ui._carColor(car);
+      return '<div class="car-card status-border-' + worst + ' card-glow-' + worst + '" data-car="' + id + '" style="--car-accent:' + accent + '">' +
+        '<div class="car-card-stripe"></div>' +
+        '<div class="car-card-body">' +
         '<div class="car-card-head">' +
+        '<div class="car-thumb" style="background:' + accent + '22;border-color:' + accent + '55">' +
+        AA.ui._svcIcon('car', 22) + '</div>' +
         '<div class="car-card-id">' +
         '<span class="plate-chip mono">' + AA.escapeHtml(car.plate) + '</span>' +
         '<span class="car-name">' + AA.escapeHtml((car.brand || '') + ' ' + (car.model || '')) + '</span>' +
         '</div>' +
         '<span class="badge badge-' + worst + '">' + AA.STATUS_LABELS[worst] + '</span>' +
         '</div>' +
-        (alerts || '<div class="svc-row status-ok"><span class="svc-label">' + AA.ui._svcIcon('check', 16) + ' Nici o alertă activă</span></div>') +
-        '</div>';
+        (alerts || '<div class="svc-row status-ok"><span class="svc-label">' + AA.ui._svcBubble('check', 26) + '<span>Nici o alertă activă</span></span></div>') +
+        '</div></div>';
     }).join('');
 
     return banner +
@@ -310,10 +350,17 @@
     }
     return ids.map(function (id) {
       const car = st.cars[id];
-      return '<div class="list-card" data-car="' + id + '">' +
+      const worst = AA.getCarWorstStatus(car);
+      const accent = AA.ui._carColor(car);
+      return '<div class="list-card" data-car="' + id + '" style="--car-accent:' + accent + '">' +
+        '<div class="list-card-stripe"></div>' +
+        '<div class="car-thumb car-thumb-sm" style="background:' + accent + '22;border-color:' + accent + '55">' +
+        AA.ui._svcIcon('car', 18) + '</div>' +
+        '<div class="list-card-info">' +
         '<div class="plate-chip mono">' + AA.escapeHtml(car.plate) + '</div>' +
         '<div class="list-sub">' + AA.escapeHtml((car.brand || '') + ' ' + (car.model || '')) +
-        ' · ' + AA.formatKm(car.currentKm) + '</div></div>';
+        ' · ' + AA.formatKm(car.currentKm) + '</div></div>' +
+        '<span class="status-dot status-dot-' + worst + '"></span></div>';
     }).join('') + '<button class="fab" id="fabAddCar">+</button>';
   };
 
@@ -328,7 +375,7 @@
         '<div class="svc-card-layout">' +
         AA.ui._ring(svc, car, d) +
         '<div class="svc-card-body">' +
-        '<div class="svc-head"><span class="svc-title">' + AA.ui._svcIcon(svc.type) + ' ' + AA.escapeHtml(d.label) + '</span>' +
+        '<div class="svc-head"><span class="svc-title">' + AA.ui._svcBubble(svc.type, 34) + '<span>' + AA.escapeHtml(d.label) + '</span></span>' +
         '<span class="badge badge-' + d.status + '">' + AA.STATUS_LABELS[d.status] + '</span></div>' +
         '<div class="list-sub">' + AA.escapeHtml(d.summary) + '</div>' +
         AA.ui._progressBar(d.progress, d.status) +
@@ -347,8 +394,11 @@
         AA.escapeHtml(meta.label) + ' · ' + AA.formatKm(h.doneKm) + '</div>';
     }).join('');
 
+    const accent = AA.ui._carColor(car);
     return '<button class="btn btn-ghost back-btn" data-back>← Înapoi</button>' +
-      '<div class="car-hero">' +
+      '<div class="car-hero" style="--car-accent:' + accent + '">' +
+      '<div class="car-hero-glow"></div>' +
+      '<div class="car-hero-thumb">' + AA.ui._svcIcon('car', 36) + '</div>' +
       '<div class="plate-chip plate-chip-lg mono">' + AA.escapeHtml(car.plate) + '</div>' +
       '<div class="car-hero-sub">' + AA.escapeHtml((car.brand || '') + ' ' + (car.model || '') + ' · ' + (car.year || '')) + '</div>' +
       '</div>' +
@@ -449,7 +499,7 @@
     if (m.type === 'pick-service') {
       const opts = Object.keys(AA.SERVICE_TYPES).map(function (k) {
         const t = AA.SERVICE_TYPES[k];
-        return '<button class="pick-btn" data-type="' + k + '">' + AA.ui._svcIcon(k, 20) + '<span>' + t.label + '</span></button>';
+        return '<button class="pick-btn" data-type="' + k + '">' + AA.ui._svcBubble(k, 36) + '<span>' + t.label + '</span></button>';
       }).join('');
       return '<div class="modal-overlay" id="modalOverlay"><div class="modal modal-lg">' +
         '<h3>Alege tip serviciu</h3><div class="pick-grid">' + opts + '</div>' +
