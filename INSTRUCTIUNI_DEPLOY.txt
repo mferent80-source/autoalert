@@ -1,32 +1,43 @@
-AUTOLERT - DEPLOY (daca nu se deschide fereastra)
-=================================================
+AUTOLERT DEPLOY - CITESTE ASTA
+==============================
 
-METODA 1 - Win+R (cea mai sigura)
----------------------------------
-1. Apasa Win + R
-2. Lipeste EXACT:
-   cmd /k "cd /d C:\Users\Cimin\AutoAlert\scripts && deploy.bat"
-3. Enter
-4. Login Google in browser cand cere
-5. Asteapta "GATA - AutoAlert e live!"
+EROAREA 0x800700E8 = vine din CURSOR, nu din Windows.
+NU rula deploy din Cursor! Foloseste una din metodele de mai jos.
 
 
-METODA 2 - Explorer
--------------------
-1. Deschide folderul: C:\Users\Cimin\AutoAlert
-2. Dublu-click pe: DESCHIDE_DEPLOY.cmd
-   (NU din Cursor - din Windows Explorer!)
+METODA A - Explorer (2 dublu-click-uri)
+---------------------------------------
+1. Deschide folderul in Explorer (NU in Cursor):
+   C:\Users\Cimin\AutoAlert
+
+2. Dublu-click:  1_LOGIN.bat
+   -> browser Google -> login -> revino in fereastra
+
+3. Dublu-click:  2_DEPLOY.bat
+   -> asteapta "GATA! AutoAlert e live!"
 
 
-METODA 3 - Shortcut Desktop
----------------------------
-Pe Desktop ar trebui sa fie: "AutoAlert Deploy.lnk"
-Dublu-click pe el.
+METODA B - Win+R (daca .bat nu se deschide)
+-------------------------------------------
+Apasa Win+R, lipeste UNA din comenzi, Enter:
+
+Pas 1 - login:
+C:\Users\Cimin\AutoAlert\1_LOGIN.bat
+
+Pas 2 - deploy (DUPA login):
+C:\Users\Cimin\AutoAlert\2_DEPLOY.bat
 
 
-Dupa deploy:
-  https://datorietrack.web.app
+METODA C - Manual in CMD (Win+R -> cmd -> Enter)
+------------------------------------------------
+cd /d C:\Users\Cimin\AutoAlert\scripts
 
-Daca login Google nu merge:
-  https://console.firebase.google.com/project/datorietrack/authentication/providers
-  -> Activeaza Google Sign-In
+"C:\Program Files\nodejs\node.exe" "%APPDATA%\npm\node_modules\firebase-tools\lib\bin\firebase.js" login
+
+"C:\Program Files\nodejs\node.exe" "%APPDATA%\npm\node_modules\firebase-tools\lib\bin\firebase.js" deploy --only database,hosting
+
+
+Dupa deploy:  https://datorietrack.web.app
+
+Google Sign-In (daca nu merge login in app):
+https://console.firebase.google.com/project/datorietrack/authentication/providers
