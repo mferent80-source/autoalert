@@ -4,10 +4,11 @@ AUTOLERT - DEPLOY FARA FIREBASE CLI (3 pasi in browser)
 Firebase CLI nu merge pe PC-ul tau. Am pregatit deploy pe GitHub Pages.
 
 
-PASUL 1 - Asteapta link GitHub (agentul il publica)
-----------------------------------------------------
-URL va fi ceva de genul:
+PASUL 1 - App LIVE (GitHub Pages)
+---------------------------------
   https://mferent80-source.github.io/autoalert/
+
+Repo: https://github.com/mferent80-source/autoalert
 
 
 PASUL 2 - Firebase Console (2 minute, doar copy-paste)
