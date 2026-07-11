@@ -163,7 +163,6 @@
     if (meta.mode === 'date' || meta.mode === 'both') {
       if (meta.intervalMonths) {
         svc.nextDate = AA.addMonths(today, meta.intervalMonths);
-        svc.intervalDays = meta.intervalMonths * 30;
       } else if (meta.suggestMonth) {
         const y = new Date().getFullYear();
         const m = String(meta.suggestMonth).padStart(2, '0');

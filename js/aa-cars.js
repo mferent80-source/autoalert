@@ -124,7 +124,6 @@
 
     if (meta.intervalMonths) {
       updates.nextDate = AA.addMonths(today, meta.intervalMonths);
-      updates.intervalDays = meta.intervalMonths * 30;
     } else if (meta.suggestMonth) {
       const parts = today.split('-').map(Number);
       let y = parts[0];
