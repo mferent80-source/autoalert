@@ -10,6 +10,7 @@
   let _modal = null;
   let _demoMode = false;
   let _renderTimer = null;
+  let _deepLinkDone = false;
 
   AA.ui._sortServiceIds = function (car) {
     return Object.keys(car.services || {}).sort(function (a, b) {
@@ -464,6 +465,8 @@
 
   AA.ui._renderSettings = function (st) {
     const enabled = AA.notif.isEnabled();
+    const evening = AA.notif.isEveningEnabled();
+    const live = AA.notif.isLiveEnabled();
     const haptic = AA.notif.isHapticEnabled();
     const sound = AA.notif.isSoundEnabled();
     return '<button class="btn btn-ghost back-btn" data-back>← Înapoi</button>' +
@@ -473,6 +476,14 @@
       '<input type="checkbox" id="chkMorning" ' + (enabled ? 'checked' : '') + '>' +
       '</label>' +
       '<label class="toggle-row">' +
+      '<span>Reminder seară (18–20)</span>' +
+      '<input type="checkbox" id="chkEvening" ' + (evening ? 'checked' : '') + '>' +
+      '</label>' +
+      '<label class="toggle-row">' +
+      '<span>Alerte live (la 30 min)</span>' +
+      '<input type="checkbox" id="chkLive" ' + (live ? 'checked' : '') + '>' +
+      '</label>' +
+      '<label class="toggle-row">' +
       '<span>Vibrație la alerte expirate</span>' +
       '<input type="checkbox" id="chkHaptic" ' + (haptic ? 'checked' : '') + '>' +
       '</label>' +
@@ -480,8 +491,10 @@
       '<span>Sunet la alerte expirate</span>' +
       '<input type="checkbox" id="chkSound" ' + (sound ? 'checked' : '') + '>' +
       '</label>' +
-      '<div class="section-title">Date</div>' +
-      '<button class="btn" id="btnExport">Export JSON backup</button>' +
+      '<div class="section-title">Export</div>' +
+      '<button class="btn" id="btnExportPdf">Raport PDF (ITP, RCA…)</button>' +
+      '<button class="btn btn-ghost" id="btnExport">Backup JSON</button>' +
+      '<div class="section-title">Cont</div>' +
       '<button class="btn btn-ghost" id="btnLogout">Deconectare</button>' +
       '<p class="ver">AutoAlert v' + AA.APP_VERSION + '</p>';
   };
@@ -764,10 +777,19 @@
     if (back) back.onclick = function () { AA.ui.navigate('dashboard'); };
     const chk = document.getElementById('chkMorning');
     if (chk) chk.onchange = function () { AA.notif.toggleMorning(chk.checked); };
+    const chkE = document.getElementById('chkEvening');
+    if (chkE) chkE.onchange = function () { AA.notif.toggleEvening(chkE.checked); };
+    const chkL = document.getElementById('chkLive');
+    if (chkL) chkL.onchange = function () { AA.notif.toggleLive(chkL.checked); };
     const chkH = document.getElementById('chkHaptic');
     if (chkH) chkH.onchange = function () { AA.notif.toggleHaptic(chkH.checked); };
     const chkS = document.getElementById('chkSound');
     if (chkS) chkS.onchange = function () { AA.notif.toggleSound(chkS.checked); };
+    const expPdf = document.getElementById('btnExportPdf');
+    if (expPdf) expPdf.onclick = function () {
+      if (AA.export && AA.export.pdfReport) AA.export.pdfReport(st);
+      else AA.showToast('Export PDF indisponibil', 'error');
+    };
     const exp = document.getElementById('btnExport');
     if (exp) exp.onclick = function () {
       const blob = new Blob([JSON.stringify(st, null, 2)], { type: 'application/json' });
@@ -897,10 +919,10 @@
   AA.ui._bindSettingsDemo = function () {
     const back = document.querySelector('[data-back]');
     if (back) back.onclick = function () { AA.ui.navigate('dashboard'); };
-    document.querySelectorAll('#btnExport,#btnLogout').forEach(function (el) {
+    document.querySelectorAll('#btnExport,#btnExportPdf,#btnLogout').forEach(function (el) {
       el.onclick = function () { AA.showToast('Mod demo — doar vizualizare', 'info'); };
     });
-    document.querySelectorAll('#chkMorning,#chkHaptic,#chkSound').forEach(function (el) {
+    document.querySelectorAll('#chkMorning,#chkEvening,#chkLive,#chkHaptic,#chkSound').forEach(function (el) {
       el.onchange = function () {
         if (el.id === 'chkHaptic') AA.notif.toggleHaptic(el.checked);
         else if (el.id === 'chkSound') AA.notif.toggleSound(el.checked);
@@ -915,12 +937,46 @@
     if (btn) btn.onclick = function () { AA.ui.startDemo(); };
   };
 
+  AA.ui._handleDeepLink = function (st) {
+    const params = new URLSearchParams(location.search);
+    const view = params.get('view');
+    const action = params.get('action');
+    if (view === 'cars') AA.ui.navigate('cars');
+    else if (view === 'settings') AA.ui.navigate('settings');
+    else if (view === 'family') AA.ui.navigate('family');
+    else if (action === 'km' && st.cars) {
+      const ids = Object.keys(st.cars);
+      if (!ids.length) {
+        AA.showToast('Adaugă o mașină mai întâi', 'info');
+        return;
+      }
+      _selectedCarId = ids[0];
+      AA.ui.navigate('car-detail', { carId: ids[0] });
+      setTimeout(function () {
+        const km = document.getElementById('kmInput');
+        if (km) { km.focus(); km.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+      }, 120);
+    }
+    if (view || action) {
+      try { history.replaceState(null, '', location.pathname); } catch (_) {}
+    }
+  };
+
   AA.ui.init = function () {
     const finish = function () {
       AA.ui.hideSplash();
       AA.notif.startWatcher();
       if (_view === 'loading') AA.ui.navigate('dashboard');
     };
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', function (e) {
+        if (e.data && e.data.type === 'AA_RUN_ALERT_CHECK') {
+          AA.notif.checkMorning();
+          AA.notif.checkEvening();
+          AA.notif.checkLive();
+        }
+      });
+    }
     if (new URLSearchParams(location.search).get('demo') === '1') {
       AA.fb.init().then(function () { AA.ui.startDemo(); finish(); });
       return;
@@ -931,8 +987,13 @@
       _renderTimer = setTimeout(function () {
         AA.ui.render();
         AA.notif.checkMorning();
+        AA.notif.checkEvening();
         const st = AA.fb.getState();
         if (st.familyId && st.cars) AA.notif.alertIfExpired(st.cars);
+        if (!_deepLinkDone && st.familyId && new URLSearchParams(location.search).toString()) {
+          _deepLinkDone = true;
+          AA.ui._handleDeepLink(st);
+        }
       }, 48);
     });
     AA.fb.init().then(finish);

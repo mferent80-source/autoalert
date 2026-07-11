@@ -1,0 +1,22 @@
+name: Deploy Firebase RTDB Rules
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'database.rules.json'
+      - '.github/workflows/deploy-firebase-rules.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy database rules
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only database --project autoalert-89b80
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}

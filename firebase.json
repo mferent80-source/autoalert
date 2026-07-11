@@ -9,7 +9,9 @@
       "**/.*",
       "**/node_modules/**",
       "docs/**",
-      "scripts/**"
+      "scripts/**",
+      "android/**",
+      ".github/**"
     ],
     "headers": [
       {

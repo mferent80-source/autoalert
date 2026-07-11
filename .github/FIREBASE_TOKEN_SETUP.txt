@@ -1,0 +1,17 @@
+AUTOMATIZARE REGULI FIREBASE (GitHub Actions)
+==============================================
+
+1. Generează token Firebase CI (o singură dată):
+   - Deschide CMD: firebase login:ci
+   - Copiază token-ul afișat
+
+2. Adaugă secret în GitHub:
+   - https://github.com/mferent80-source/autoalert/settings/secrets/actions
+   - New repository secret
+   - Name: FIREBASE_TOKEN
+   - Value: token-ul copiat
+
+3. Gata! La fiecare push pe database.rules.json, regulile se publică automat.
+
+Manual (fără secret): lipește JSON în Firebase Console → Rules → Publish.
+Link: https://console.firebase.google.com/project/autoalert-89b80/database/autoalert-89b80-default-rtdb/rules

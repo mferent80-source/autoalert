@@ -1,14 +1,23 @@
-/* AutoAlert — morning reminders + haptic/sound alerts */
+/* AutoAlert — notifications: morning, evening, live, haptic, sound */
 (function (global) {
   'use strict';
 
   const AA = global.AA || {};
   AA.notif = AA.notif || {};
   let _interval = null;
+  let _liveInterval = null;
   let _audioCtx = null;
 
   AA.notif.isEnabled = function () {
     return localStorage.getItem(AA.LS.morningNotif) === '1';
+  };
+
+  AA.notif.isEveningEnabled = function () {
+    return localStorage.getItem(AA.LS.eveningNotif) === '1';
+  };
+
+  AA.notif.isLiveEnabled = function () {
+    return localStorage.getItem(AA.LS.liveNotif) === '1';
   };
 
   AA.notif.isHapticEnabled = function () {
@@ -21,23 +30,64 @@
     return s.soundAlert !== '0';
   };
 
+  AA.notif._requestPerm = async function () {
+    if (!('Notification' in window)) {
+      AA.showToast('Browser-ul nu suportă notificări', 'warn');
+      return false;
+    }
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') {
+      AA.showToast('Permisiune notificări refuzată', 'warn');
+      return false;
+    }
+    AA.notif._registerPeriodicSync();
+    return true;
+  };
+
+  AA.notif._registerPeriodicSync = function () {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.ready.then(function (reg) {
+      if (!reg.periodicSync) return;
+      return reg.periodicSync.register('aa-alerts', { minInterval: 12 * 60 * 60 * 1000 })
+        .catch(function () { /* unsupported */ });
+    }).catch(function () {});
+  };
+
   AA.notif.toggleMorning = async function (enabled) {
     if (enabled) {
-      if (!('Notification' in window)) {
-        AA.showToast('Browser-ul nu suportă notificări', 'warn');
-        return false;
-      }
-      const perm = await Notification.requestPermission();
-      if (perm !== 'granted') {
-        AA.showToast('Permisiune notificări refuzată', 'warn');
-        return false;
-      }
+      if (!(await AA.notif._requestPerm())) return false;
       localStorage.setItem(AA.LS.morningNotif, '1');
       AA.showToast('Reminder dimineață activ (7–10)', 'success');
       return true;
     }
     localStorage.setItem(AA.LS.morningNotif, '0');
     AA.showToast('Reminder dimineață dezactivat', 'info');
+    return true;
+  };
+
+  AA.notif.toggleEvening = async function (enabled) {
+    if (enabled) {
+      if (!(await AA.notif._requestPerm())) return false;
+      localStorage.setItem(AA.LS.eveningNotif, '1');
+      AA.showToast('Reminder seară activ (18–20)', 'success');
+      return true;
+    }
+    localStorage.setItem(AA.LS.eveningNotif, '0');
+    AA.showToast('Reminder seară dezactivat', 'info');
+    return true;
+  };
+
+  AA.notif.toggleLive = async function (enabled) {
+    if (enabled) {
+      if (!(await AA.notif._requestPerm())) return false;
+      localStorage.setItem(AA.LS.liveNotif, '1');
+      AA.notif._startLiveWatcher();
+      AA.showToast('Alerte live active (la 30 min)', 'success');
+      return true;
+    }
+    localStorage.setItem(AA.LS.liveNotif, '0');
+    AA.notif._stopLiveWatcher();
+    AA.showToast('Alerte live dezactivate', 'info');
     return true;
   };
 
@@ -113,35 +163,11 @@
     AA.notif.playAlertSound(true);
   };
 
-  AA.notif.checkMorning = function () {
-    if (!AA.notif.isEnabled()) return;
-    if (!('Notification' in window) || Notification.permission !== 'granted') return;
-
-    const h = new Date().getHours();
-    if (h < 7 || h > 10) return;
-
-    const dayKey = AA.todayStr();
-    if (localStorage.getItem(AA.LS.morningNotifDay) === dayKey) return;
-
-    const cars = (AA.fb.getState().cars) || {};
-    const agg = AA.aggregateAlerts(cars);
-    if (!agg.expired && !agg.urgent && !agg.warning) return;
-
-    localStorage.setItem(AA.LS.morningNotifDay, dayKey);
-
-    if (agg.expired) {
-      AA.notif.vibrateAlert(true);
-      AA.notif.playAlertSound(true);
-    } else if (agg.urgent) {
-      AA.notif.vibrateAlert(false);
-      AA.notif.playAlertSound(false);
-    }
-
+  AA.notif._buildBody = function (agg) {
     const parts = [];
     if (agg.expired) parts.push(agg.expired + ' expirate');
     if (agg.urgent) parts.push(agg.urgent + ' urgente');
     if (agg.warning) parts.push(agg.warning + ' în curând');
-
     let body = parts.join(' · ');
     if (agg.items.length) {
       const top = agg.items.slice(0, 3).map(function (i) {
@@ -149,18 +175,103 @@
       });
       body += '\n' + top.join('\n');
     }
+    return body;
+  };
 
-    new Notification('AutoAlert — Alerte', {
-      body: body,
-      icon: 'icon.svg',
-      tag: 'aa-morning'
+  AA.notif._fireNotification = function (title, agg, tag, urgent) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return false;
+    if (!agg.expired && !agg.urgent && !agg.warning) return false;
+
+    if (urgent || agg.expired) {
+      AA.notif.vibrateAlert(true);
+      AA.notif.playAlertSound(true);
+    } else if (agg.urgent) {
+      AA.notif.vibrateAlert(false);
+      AA.notif.playAlertSound(false);
+    }
+
+    new Notification(title, {
+      body: AA.notif._buildBody(agg),
+      icon: './icon-192.png',
+      badge: './icon-192.png',
+      tag: tag,
+      data: { url: './index.html' }
     });
+    return true;
+  };
+
+  AA.notif._checkWindow = function (slot, hourMin, hourMax, lsKey) {
+    const h = new Date().getHours();
+    if (h < hourMin || h > hourMax) return;
+    const dayKey = AA.todayStr() + '_' + slot;
+    if (localStorage.getItem(lsKey) === dayKey) return;
+    const cars = (AA.fb.getState().cars) || {};
+    const agg = AA.aggregateAlerts(cars);
+    const title = slot === 'morning'
+      ? 'AutoAlert — Reminder dimineață'
+      : 'AutoAlert — Reminder seară';
+    if (AA.notif._fireNotification(title, agg, 'aa-' + slot, agg.expired > 0)) {
+      localStorage.setItem(lsKey, dayKey);
+    }
+  };
+
+  AA.notif.checkMorning = function () {
+    if (!AA.notif.isEnabled()) return;
+    AA.notif._checkWindow('morning', 7, 10, AA.LS.morningNotifDay);
+  };
+
+  AA.notif.checkEvening = function () {
+    if (!AA.notif.isEveningEnabled()) return;
+    AA.notif._checkWindow('evening', 18, 20, AA.LS.eveningNotifDay);
+  };
+
+  AA.notif.checkLive = function () {
+    if (!AA.notif.isLiveEnabled()) return;
+    const cars = (AA.fb.getState().cars) || {};
+    const agg = AA.aggregateAlerts(cars);
+    if (!agg.expired && !agg.urgent) return;
+    const key = AA.todayStr() + '_live_' + (agg.expired ? 'e' : 'u') + agg.expired + agg.urgent;
+    if (localStorage.getItem(AA.LS.liveNotifStamp) === key) return;
+    if (AA.notif._fireNotification('AutoAlert — Alertă activă', agg, 'aa-live', agg.expired > 0)) {
+      localStorage.setItem(AA.LS.liveNotifStamp, key);
+    }
+  };
+
+  AA.notif._pingServiceWorker = function () {
+    if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) return;
+    navigator.serviceWorker.controller.postMessage({ type: 'AA_CHECK_ALERTS' });
+  };
+
+  AA.notif._startLiveWatcher = function () {
+    if (_liveInterval) return;
+    AA.notif.checkLive();
+    _liveInterval = setInterval(function () {
+      AA.notif.checkLive();
+      AA.notif._pingServiceWorker();
+    }, 30 * 60 * 1000);
+  };
+
+  AA.notif._stopLiveWatcher = function () {
+    if (_liveInterval) clearInterval(_liveInterval);
+    _liveInterval = null;
   };
 
   AA.notif.startWatcher = function () {
     if (_interval) return;
     AA.notif.checkMorning();
-    _interval = setInterval(AA.notif.checkMorning, 15 * 60 * 1000);
+    AA.notif.checkEvening();
+    if (AA.notif.isLiveEnabled()) AA.notif._startLiveWatcher();
+    _interval = setInterval(function () {
+      AA.notif.checkMorning();
+      AA.notif.checkEvening();
+    }, 15 * 60 * 1000);
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') {
+        AA.notif.checkMorning();
+        AA.notif.checkEvening();
+        AA.notif.checkLive();
+      }
+    });
   };
 
   global.AA = AA;

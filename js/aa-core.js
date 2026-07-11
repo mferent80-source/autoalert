@@ -3,11 +3,15 @@
   'use strict';
 
   const AA = global.AA || {};
-  AA.APP_VERSION = '1.3.4';
+  AA.APP_VERSION = '1.4.0';
 
   AA.LS = {
     morningNotif: 'aa_morning_notif',
     morningNotifDay: 'aa_morning_notif_day',
+    eveningNotif: 'aa_evening_notif',
+    eveningNotifDay: 'aa_evening_notif_day',
+    liveNotif: 'aa_live_notif',
+    liveNotifStamp: 'aa_live_notif_stamp',
     cachePrefix: 'aa_cache_',
     settings: 'aa_settings'
   };

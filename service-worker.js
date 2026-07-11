@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1.6.1';
+const CACHE_VERSION = 'v1.7.0';
 const CACHE_SHELL = 'aa-shell-' + CACHE_VERSION;
 
 const SHELL_URLS = [
@@ -6,6 +6,7 @@ const SHELL_URLS = [
   './index.html',
   './manifest.json',
   './icon.svg',
+  './icon-192.png',
   './version.json',
   './css/aa-v1.0.css',
   './js/aa-core.js',
@@ -14,6 +15,7 @@ const SHELL_URLS = [
   './js/aa-firebase.js',
   './js/aa-cars.js',
   './js/aa-notifications.js',
+  './js/aa-export.js',
   './js/aa-ui.js',
   './firebase-config.example.js',
   './firebase-config.js'
@@ -58,6 +60,56 @@ self.addEventListener('fetch', function (e) {
       return res;
     }).catch(function () {
       return caches.match(e.request).then(function (r) { return r || caches.match('./index.html'); });
+    })
+  );
+});
+
+self.addEventListener('message', function (e) {
+  if (!e.data || e.data.type !== 'AA_CHECK_ALERTS') return;
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clients) {
+      clients.forEach(function (c) { c.postMessage({ type: 'AA_RUN_ALERT_CHECK' }); });
+    })
+  );
+});
+
+self.addEventListener('notificationclick', function (e) {
+  e.notification.close();
+  var target = (e.notification.data && e.notification.data.url) || './index.html';
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
+      for (var i = 0; i < list.length; i++) {
+        if ('focus' in list[i]) {
+          list[i].navigate(target);
+          return list[i].focus();
+        }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(target);
+    })
+  );
+});
+
+self.addEventListener('periodicsync', function (e) {
+  if (e.tag === 'aa-alerts') {
+    e.waitUntil(
+      self.clients.matchAll({ type: 'window' }).then(function (clients) {
+        clients.forEach(function (c) { c.postMessage({ type: 'AA_RUN_ALERT_CHECK' }); });
+      })
+    );
+  }
+});
+
+self.addEventListener('push', function (e) {
+  var data = { title: 'AutoAlert', body: 'Ai alerte noi de verificat.' };
+  try {
+    if (e.data) data = Object.assign(data, e.data.json());
+  } catch (_) {}
+  e.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: './icon-192.png',
+      badge: './icon-192.png',
+      data: { url: './index.html' }
     })
   );
 });

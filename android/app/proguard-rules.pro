@@ -1,0 +1,1 @@
+# AutoAlert WebView — no obfuscation needed
