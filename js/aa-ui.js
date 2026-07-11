@@ -529,10 +529,7 @@
       btn.disabled = true;
       try { await AA.fb.signInGoogle(); }
       catch (e) {
-        var m = e.message || 'Eroare login';
-        if ((global.AA_FIREBASE_CONFIG || {}).projectId === 'datorietrack') {
-          m = 'datorietrack nu are Google Auth. Deschide setup-firebase.html';
-        }
+        var m = (AA.fb._authErrorMsg ? AA.fb._authErrorMsg(e) : null) || e.message || 'Eroare login';
         AA.showToast(m, 'error');
         btn.disabled = false;
       }

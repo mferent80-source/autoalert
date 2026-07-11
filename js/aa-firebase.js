@@ -59,7 +59,8 @@
     _state.configured = true;
 
     const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
-    const { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } =
+    const { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect,
+      getRedirectResult, signOut } =
       await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
     const { getDatabase, ref, get, set, update, remove, onValue, off, query, orderByChild, equalTo } =
       await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
@@ -69,7 +70,13 @@
     _db = getDatabase(_app);
 
     AA.fb._api = { ref, get, set, update, remove, onValue, off, query, orderByChild, equalTo,
-      GoogleAuthProvider, signInWithPopup, signOut };
+      GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut };
+
+    try {
+      await getRedirectResult(_auth);
+    } catch (e) {
+      console.warn('redirect result', e);
+    }
 
     if (_unsubAuth) _unsubAuth();
     _unsubAuth = onAuthStateChanged(_auth, async function (user) {
@@ -158,11 +165,36 @@
     });
   };
 
+  AA.fb._authErrorMsg = function (e) {
+    const code = (e && e.code) || '';
+    const map = {
+      'auth/operation-not-allowed': 'Google Sign-In nu e activat în Firebase Console (Authentication → Google → Enable).',
+      'auth/unauthorized-domain': 'Domeniul nu e autorizat. Adaugă mferent80-source.github.io în Authentication → Settings.',
+      'auth/popup-blocked': 'Popup blocat — încerc redirect…',
+      'auth/popup-closed-by-user': 'Fereastra Google a fost închisă.',
+      'auth/invalid-action': 'Acțiune invalidă — activează Google Sign-In și Identity Toolkit API în Google Cloud.'
+    };
+    if (map[code]) return map[code];
+    const msg = (e && e.message) || '';
+    if (/invalid/i.test(msg)) return 'Google Auth neconfigurat. Urmează pașii din FIX_GOOGLE_AUTH.txt';
+    return msg || 'Eroare login Google';
+  };
+
   AA.fb.signInGoogle = async function () {
     if (!_auth) throw new Error('Firebase neinițializat');
-    const { GoogleAuthProvider, signInWithPopup } = AA.fb._api;
+    const { GoogleAuthProvider, signInWithPopup, signInWithRedirect } = AA.fb._api;
     const provider = new GoogleAuthProvider();
-    await signInWithPopup(_auth, provider);
+    try {
+      await signInWithPopup(_auth, provider);
+    } catch (e) {
+      const code = e && e.code;
+      if (code === 'auth/popup-blocked' || code === 'auth/popup-closed-by-user' ||
+          /invalid/i.test((e && e.message) || '')) {
+        await signInWithRedirect(_auth, provider);
+        return;
+      }
+      throw new Error(AA.fb._authErrorMsg(e));
+    }
   };
 
   AA.fb.signOut = async function () {

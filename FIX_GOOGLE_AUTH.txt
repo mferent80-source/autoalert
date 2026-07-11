@@ -1,0 +1,60 @@
+AUTOLERT - "The requested action is invalid"
+============================================
+
+Cauza: Google Sign-In NU e activat complet pe proiectul autoalert-89b80.
+
+
+PASUL 1 - Activeaza API-urile (Google Cloud)
+---------------------------------------------
+Deschide (logat cu acelasi cont Google ca Firebase):
+
+https://console.cloud.google.com/apis/library/identitytoolkit.googleapis.com?project=autoalert-89b80
+
+-> apasa ENABLE (daca nu e deja)
+
+Apoi:
+
+https://console.cloud.google.com/apis/library/firebase.googleapis.com?project=autoalert-89b80
+
+-> ENABLE
+
+
+PASUL 2 - OAuth consent screen
+------------------------------
+https://console.cloud.google.com/apis/credentials/consent?project=autoalert-89b80
+
+- User Type: External (sau Internal daca ai Workspace)
+- App name: AutoAlert
+- User support email: emailul tau
+- Developer contact: emailul tau
+- Save and Continue (pana la final, Back to dashboard)
+
+
+PASUL 3 - Firebase: Google Sign-In
+------------------------------------
+https://console.firebase.google.com/project/autoalert-89b80/authentication/providers
+
+1) Daca vezi "Get started" -> apasa o data
+2) Click pe GOOGLE (randul din lista)
+3) Enable ON
+4] Project support email: alege emailul tau
+5) SAVE
+
+Trebuie sa scrie "Enabled" verde la Google.
+
+
+PASUL 4 - Verifica domeniile
+-----------------------------
+https://console.firebase.google.com/project/autoalert-89b80/authentication/settings
+
+Authorized domains trebuie sa contina:
+  mferent80-source.github.io
+  localhost
+
+
+PASUL 5 - Test
+--------------
+https://mferent80-source.github.io/autoalert/
+Ctrl+Shift+R -> Continua cu Google
+
+Daca popup nu merge, app-ul incearca automat redirect (pagina se reincarca dupa login).
