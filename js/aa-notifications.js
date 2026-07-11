@@ -1,13 +1,24 @@
-/* AutoAlert — morning reminders */
+/* AutoAlert — morning reminders + haptic/sound alerts */
 (function (global) {
   'use strict';
 
   const AA = global.AA || {};
   AA.notif = AA.notif || {};
   let _interval = null;
+  let _audioCtx = null;
 
   AA.notif.isEnabled = function () {
     return localStorage.getItem(AA.LS.morningNotif) === '1';
+  };
+
+  AA.notif.isHapticEnabled = function () {
+    const s = AA.getSettings();
+    return s.hapticAlert !== '0';
+  };
+
+  AA.notif.isSoundEnabled = function () {
+    const s = AA.getSettings();
+    return s.soundAlert !== '0';
   };
 
   AA.notif.toggleMorning = async function (enabled) {
@@ -30,6 +41,78 @@
     return true;
   };
 
+  AA.notif.toggleHaptic = function (enabled) {
+    AA.saveSettings({ hapticAlert: enabled ? '1' : '0' });
+    if (enabled && navigator.vibrate) {
+      navigator.vibrate(80);
+      AA.showToast('Vibrație alertă activată', 'success');
+    } else {
+      AA.showToast('Vibrație alertă dezactivată', 'info');
+    }
+  };
+
+  AA.notif.toggleSound = function (enabled) {
+    AA.saveSettings({ soundAlert: enabled ? '1' : '0' });
+    if (enabled) {
+      AA.notif.playAlertSound(false);
+      AA.showToast('Sunet alertă activat', 'success');
+    } else {
+      AA.showToast('Sunet alertă dezactivat', 'info');
+    }
+  };
+
+  AA.notif._getAudio = function () {
+    if (!_audioCtx) {
+      try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) { return null; }
+    }
+    if (_audioCtx.state === 'suspended') _audioCtx.resume();
+    return _audioCtx;
+  };
+
+  AA.notif.playAlertSound = function (urgent) {
+    if (!AA.notif.isSoundEnabled()) return;
+    const ctx = AA.notif._getAudio();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const playTone = function (freq, start, dur) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, now + start);
+      gain.gain.exponentialRampToValueAtTime(0.18, now + start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + start + dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + start);
+      osc.stop(now + start + dur + 0.05);
+    };
+    if (urgent) {
+      playTone(880, 0, 0.12);
+      playTone(660, 0.14, 0.12);
+      playTone(880, 0.28, 0.18);
+    } else {
+      playTone(523, 0, 0.15);
+      playTone(659, 0.18, 0.2);
+    }
+  };
+
+  AA.notif.vibrateAlert = function (urgent) {
+    if (!AA.notif.isHapticEnabled() || !navigator.vibrate) return;
+    if (urgent) navigator.vibrate([120, 60, 120, 60, 200]);
+    else navigator.vibrate([80, 40, 80]);
+  };
+
+  AA.notif.alertIfExpired = function (cars) {
+    const agg = AA.aggregateAlerts(cars || {});
+    if (!agg.expired) return;
+    const key = AA.todayStr() + '_exp';
+    if (sessionStorage.getItem('aa_exp_alert') === key) return;
+    sessionStorage.setItem('aa_exp_alert', key);
+    AA.notif.vibrateAlert(true);
+    AA.notif.playAlertSound(true);
+  };
+
   AA.notif.checkMorning = function () {
     if (!AA.notif.isEnabled()) return;
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
@@ -45,6 +128,14 @@
     if (!agg.expired && !agg.urgent && !agg.warning) return;
 
     localStorage.setItem(AA.LS.morningNotifDay, dayKey);
+
+    if (agg.expired) {
+      AA.notif.vibrateAlert(true);
+      AA.notif.playAlertSound(true);
+    } else if (agg.urgent) {
+      AA.notif.vibrateAlert(false);
+      AA.notif.playAlertSound(false);
+    }
 
     const parts = [];
     if (agg.expired) parts.push(agg.expired + ' expirate');

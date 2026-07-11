@@ -61,6 +61,24 @@
     return AA.worstStatus(statuses);
   };
 
+  AA.getServiceProgress = function (service, car) {
+    const meta = AA.SERVICE_TYPES[service.type] || {};
+    const mode = service.mode || meta.mode || 'date';
+    const today = AA.todayStr();
+    let pct = null;
+
+    if ((mode === 'date' || mode === 'both') && service.nextDate) {
+      const daysLeft = AA.diffDays(today, service.nextDate);
+      const warns = service.warnDaysBefore || meta.warnDaysBefore || [30];
+      const span = Math.max(Math.max.apply(null, warns), 30);
+      pct = Math.max(0, Math.min(100, (daysLeft / span) * 100));
+    } else if ((mode === 'mileage' || mode === 'both') && service.intervalKm && car && car.currentKm != null) {
+      const kmLeft = (service.lastKm || 0) + service.intervalKm - car.currentKm;
+      pct = Math.max(0, Math.min(100, (kmLeft / service.intervalKm) * 100));
+    }
+    return pct;
+  };
+
   AA.getServiceDetail = function (service, car) {
     const meta = AA.SERVICE_TYPES[service.type] || { label: service.type, icon: '📋' };
     const today = AA.todayStr();
@@ -85,7 +103,8 @@
       status: status,
       label: meta.label,
       icon: meta.icon,
-      summary: parts.join(' · ') || 'Fără termen setat'
+      summary: parts.join(' · ') || 'Fără termen setat',
+      progress: AA.getServiceProgress(service, car)
     };
   };
 

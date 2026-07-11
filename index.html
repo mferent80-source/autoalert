@@ -12,11 +12,30 @@
   <link rel="stylesheet" href="css/aa-v1.0.css">
 </head>
 <body>
+  <div id="splash" class="splash">
+    <div class="splash-glow"></div>
+    <div class="splash-wheel">
+      <svg viewBox="0 0 100 100" width="72" height="72" aria-hidden="true">
+        <circle cx="50" cy="50" r="42" fill="none" stroke="#f97316" stroke-width="4"/>
+        <circle cx="50" cy="50" r="8" fill="#f97316"/>
+        <path d="M50 12 L50 88 M12 50 L88 50" stroke="#3b82f6" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="50" cy="12" r="5" fill="#e8eaef"/>
+        <circle cx="50" cy="88" r="5" fill="#e8eaef"/>
+        <circle cx="12" cy="50" r="5" fill="#e8eaef"/>
+        <circle cx="88" cy="50" r="5" fill="#e8eaef"/>
+      </svg>
+    </div>
+    <div class="splash-title">Auto<span>Alert</span></div>
+    <div class="splash-tagline">Alerte auto pentru familie</div>
+    <div class="splash-loader"><span></span><span></span><span></span></div>
+  </div>
+
   <div id="app"></div>
   <div id="toastContainer"></div>
 
   <script src="firebase-config.js" onerror="console.warn('firebase-config.js lipsă — copiază din firebase-config.example.js')"></script>
   <script src="js/aa-core.js"></script>
+  <script src="js/aa-icons.js"></script>
   <script src="js/aa-alerts.js"></script>
   <script src="js/aa-firebase.js"></script>
   <script src="js/aa-cars.js"></script>

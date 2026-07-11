@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1.0.0';
+const CACHE_VERSION = 'v1.1.0';
 const CACHE_SHELL = 'aa-shell-' + CACHE_VERSION;
 
 const SHELL_URLS = [
@@ -9,6 +9,7 @@ const SHELL_URLS = [
   './version.json',
   './css/aa-v1.0.css',
   './js/aa-core.js',
+  './js/aa-icons.js',
   './js/aa-alerts.js',
   './js/aa-firebase.js',
   './js/aa-cars.js',
