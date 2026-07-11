@@ -772,6 +772,8 @@ body::before {
 .pick-btn .aa-icon { flex-shrink: 0; color: var(--accent); }
 .pick-btn:hover { border-color: var(--accent); background: rgba(249,115,22,.06); }
 .pick-btn:disabled, .pick-btn-loading { opacity: 0.55; cursor: wait; }
+.pick-btn-has { border-color: var(--green); background: rgba(74,222,128,.06); }
+.pick-tag { font-style: normal; color: var(--green); font-size: 11px; margin-left: 2px; }
 
 #toastContainer {
   position: fixed;

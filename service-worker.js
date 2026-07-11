@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1.6.0';
+const CACHE_VERSION = 'v1.6.1';
 const CACHE_SHELL = 'aa-shell-' + CACHE_VERSION;
 
 const SHELL_URLS = [

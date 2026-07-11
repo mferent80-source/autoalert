@@ -69,8 +69,12 @@
 
     if ((mode === 'date' || mode === 'both') && service.nextDate) {
       const daysLeft = AA.diffDays(today, service.nextDate);
+      const from = service.lastDate || today;
+      const totalDays = AA.diffDays(from, service.nextDate);
       const warns = service.warnDaysBefore || meta.warnDaysBefore || [30];
-      const span = Math.max(Math.max.apply(null, warns), 30);
+      const span = (totalDays && totalDays > 0)
+        ? totalDays
+        : Math.max(Math.max.apply(null, warns), 30);
       pct = Math.max(0, Math.min(100, (daysLeft / span) * 100));
     } else if ((mode === 'mileage' || mode === 'both') && service.intervalKm && car && car.currentKm != null) {
       const kmLeft = (service.lastKm || 0) + service.intervalKm - car.currentKm;

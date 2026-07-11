@@ -9,6 +9,20 @@
   let _selectedCarId = null;
   let _modal = null;
   let _demoMode = false;
+  let _renderTimer = null;
+
+  AA.ui._sortServiceIds = function (car) {
+    return Object.keys(car.services || {}).sort(function (a, b) {
+      const sa = AA.getServiceStatus(car.services[a], car);
+      const sb = AA.getServiceStatus(car.services[b], car);
+      const ra = AA.STATUS_RANK[sa] ?? 3;
+      const rb = AA.STATUS_RANK[sb] ?? 3;
+      if (ra !== rb) return ra - rb;
+      const la = (AA.SERVICE_TYPES[car.services[a].type] || {}).label || '';
+      const lb = (AA.SERVICE_TYPES[car.services[b].type] || {}).label || '';
+      return la.localeCompare(lb, 'ro');
+    });
+  };
 
   AA.ui.getState = function () {
     if (_demoMode) return AA.ui._demoState();
@@ -373,7 +387,7 @@
     const car = st.cars[_selectedCarId];
     if (!car) return '<div class="empty">Mașină negăsită.</div>';
 
-    const services = Object.keys(car.services || {}).map(function (sid) {
+    const services = AA.ui._sortServiceIds(car).map(function (sid) {
       const svc = car.services[sid];
       const d = AA.getServiceDetail(svc, car);
       return '<div class="list-card svc-card status-border-' + d.status + '" data-svc="' + sid + '">' +
@@ -535,10 +549,19 @@
         '<button class="btn btn-primary" id="modalSave">Confirmă</button></div></div></div>';
     }
     if (m.type === 'pick-service') {
+      const gst = AA.ui.getState();
+      const pickCar = _selectedCarId && gst.cars ? gst.cars[_selectedCarId] : null;
+      const existing = {};
+      if (pickCar && pickCar.services) {
+        Object.keys(pickCar.services).forEach(function (sid) {
+          existing[pickCar.services[sid].type] = true;
+        });
+      }
       const opts = Object.keys(AA.SERVICE_TYPES).map(function (k) {
         const t = AA.SERVICE_TYPES[k];
-        return '<button type="button" class="pick-btn" data-svc-type="' + k + '">' +
-          AA.ui._svcBubble(k, 36) + '<span>' + t.label + '</span></button>';
+        const has = existing[k];
+        return '<button type="button" class="pick-btn' + (has ? ' pick-btn-has' : '') + '" data-svc-type="' + k + '">' +
+          AA.ui._svcBubble(k, 36) + '<span>' + t.label + (has ? ' <em class="pick-tag">✓</em>' : '') + '</span></button>';
       }).join('');
       return '<div class="modal-overlay" id="modalOverlay"><div class="modal modal-lg">' +
         '<h3>Alege tip serviciu</h3><div class="pick-grid" id="pickServiceGrid">' + opts + '</div>' +
@@ -903,12 +926,14 @@
       return;
     }
     AA.fb.onState(function () {
-      if (!_demoMode) {
+      if (_demoMode) return;
+      clearTimeout(_renderTimer);
+      _renderTimer = setTimeout(function () {
         AA.ui.render();
         AA.notif.checkMorning();
         const st = AA.fb.getState();
         if (st.familyId && st.cars) AA.notif.alertIfExpired(st.cars);
-      }
+      }, 48);
     });
     AA.fb.init().then(finish);
   };

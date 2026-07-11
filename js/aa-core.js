@@ -3,7 +3,7 @@
   'use strict';
 
   const AA = global.AA || {};
-  AA.APP_VERSION = '1.3.3';
+  AA.APP_VERSION = '1.3.4';
 
   AA.LS = {
     morningNotif: 'aa_morning_notif',
