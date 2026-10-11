@@ -36,7 +36,11 @@
     if (patch.plate != null) allowed.plate = AA.formatPlate(patch.plate).slice(0, 10);
     if (patch.brand != null) allowed.brand = AA.formatCarField(patch.brand).slice(0, 60);
     if (patch.model != null) allowed.model = AA.formatCarField(patch.model).slice(0, 60);
-    if (patch.year != null) allowed.year = Number(patch.year);
+    if (patch.year != null && patch.year !== '') {
+      const y = Math.round(Number(patch.year));
+      if (!(y >= 1970 && y <= 2100)) throw new Error('Anul trebuie să fie între 1970 și 2100');
+      allowed.year = y;
+    }
     if (patch.color != null) allowed.color = String(patch.color).slice(0, 20);
     await AA.fb.updateFamilyData('cars/' + carId, allowed);
   };
@@ -125,7 +129,8 @@
     if (!svc) throw new Error('Serviciu negăsit');
 
     const today = opts.date || AA.todayStr();
-    const km = opts.km != null ? opts.km : (car ? car.currentKm : 0);
+    // Din fereastră vine text („329000”); regulile RTDB cer număr, altfel „acces refuzat”.
+    const km = Math.max(0, Math.min(999999, Math.round(numVal(opts.km, car ? (car.currentKm || 0) : 0))));
     const meta = AA.SERVICE_TYPES[svc.type] || {};
     const histId = AA.genId();
 
@@ -155,7 +160,7 @@
         type: svc.type,
         doneDate: today,
         doneKm: km,
-        cost: Number(opts.cost) || 0,
+        cost: Math.max(0, Math.min(1000000, numVal(opts.cost, 0))),
         notes: String(opts.notes || '').slice(0, 500),
         doneBy: AA.fb.getState().user.uid,
         createdAt: Date.now()

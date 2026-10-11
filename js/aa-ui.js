@@ -309,10 +309,74 @@
     AA.ui.render();
   };
 
+  // ── Istoric: „Înapoi” de pe telefon merge la ecranul anterior, nu iese din aplicație ──
+  // Stiva: [baza (Acasă)] [Acasă] [ecran] [ecran] … ; din „baza” apare „apasă încă o dată ca să ieși”.
+  let _skipPop = false;
+  let _rearmTimer = null;
+
+  AA.ui._hist = function (extra) {
+    const cur = history.state || {};
+    return Object.assign({ aa: 'view', view: _view, carId: _selectedCarId, d: cur.d || 0 }, extra || {});
+  };
+
+  AA.ui._push = function (modal) {
+    try {
+      const cur = history.state || {};
+      const st = AA.ui._hist({ d: (cur.d || 0) + 1, modal: !!modal });
+      if (cur.modal && !modal) history.replaceState(Object.assign(st, { d: cur.d || 1 }), '');
+      else history.pushState(st, '');
+    } catch (_) { /* fără istoric: navigarea merge oricum */ }
+  };
+
+  // Butoanele „‹ Mașini” / „‹ Acasă” fac același lucru ca „Înapoi” de pe telefon.
+  AA.ui.goBack = function (fallback) {
+    const cur = history.state || {};
+    if (cur.aa === 'view' && cur.d > 0) { history.back(); return; }
+    AA.ui.navigate(fallback || 'dashboard');
+  };
+
+  AA.ui._onPop = function (e) {
+    if (_skipPop) { _skipPop = false; return; }
+    const s = e.state || {};
+    _modal = null;
+    if (s.aa === 'base') {
+      _view = 'dashboard';
+      AA.ui.render();
+      AA.showToast('Apasă încă o dată Înapoi ca să ieși', 'info');
+      clearTimeout(_rearmTimer);
+      _rearmTimer = setTimeout(function () {
+        if (history.state && history.state.aa === 'base') {
+          try { history.pushState(AA.ui._hist({ aa: 'view', view: _view, d: 0 }), ''); } catch (_) {}
+        }
+      }, 2000);
+      return;
+    }
+    if (s.aa === 'view') {
+      if (s.view) _view = s.view;
+      if (s.carId) _selectedCarId = s.carId;
+    }
+    AA.ui.render();
+  };
+
+  AA.ui._initHistory = function () {
+    try {
+      history.replaceState({ aa: 'base', view: 'dashboard', d: 0 }, '');
+      history.pushState({ aa: 'view', view: 'dashboard', d: 0 }, '');
+    } catch (_) { return; }
+    window.addEventListener('popstate', AA.ui._onPop);
+  };
+
   AA.ui.navigate = function (view, opts) {
     opts = opts || {};
+    const changed = view !== _view || (opts.carId != null && opts.carId !== _selectedCarId);
+    const first = _view === 'loading';
     _view = view;
     if (opts.carId != null) _selectedCarId = opts.carId;
+    if (first) {
+      try { history.replaceState(AA.ui._hist({ d: 0 }), ''); } catch (_) {}
+    } else if (changed) {
+      AA.ui._push(false);
+    }
     AA.ui.render();
   };
 
@@ -566,7 +630,7 @@
   AA.ui._renderCarDetail = function (st) {
     const car = st.cars[_selectedCarId];
     if (!car) {
-      return '<div class="narrow"><div class="topbar"><button class="back-btn" data-back>‹ Mașini</button></div>' +
+      return '<div class="narrow"><div class="topbar"><button class="back-btn" data-back>‹ Înapoi</button></div>' +
         '<div class="empty"><strong>Mașina nu mai există</strong>Poate a șters-o cineva din familie.</div></div>';
     }
 
@@ -610,7 +674,7 @@
 
     return '<div class="narrow">' +
       '<div class="topbar">' +
-      '<button class="back-btn" data-back>‹ Mașini</button>' +
+      '<button class="back-btn" data-back>‹ Înapoi</button>' +
       '<button class="btn btn-sm btn-ghost" id="btnEditCar">Editează mașina</button>' +
       '</div>' +
       '<div class="car-id">' + AA.ui._plate(car.plate, 'lg') +
@@ -792,12 +856,18 @@
   };
 
   AA.ui.openModal = function (type, data, edit, opts) {
+    const wasOpen = !!_modal;
     _modal = Object.assign({ type: type, data: data || {}, edit: !!edit }, opts || {});
+    if (!wasOpen) AA.ui._push(true);
     AA.ui.render();
   };
 
   AA.ui.closeModal = function () {
     _modal = null;
+    if (history.state && history.state.modal) {
+      _skipPop = true;
+      history.back();
+    }
     AA.ui.render();
   };
 
@@ -954,7 +1024,7 @@
 
   AA.ui._bindCarDetail = function (st) {
     const back = document.querySelector('[data-back]');
-    if (back) back.onclick = function () { AA.ui.navigate('cars'); };
+    if (back) back.onclick = function () { AA.ui.goBack('cars'); };
 
     const saveKm = document.getElementById('btnSaveKm');
     if (saveKm) saveKm.onclick = async function () {
@@ -1046,7 +1116,7 @@
 
   AA.ui._bindSettings = function (st) {
     const back = document.querySelector('[data-back]');
-    if (back) back.onclick = function () { AA.ui.navigate('dashboard'); };
+    if (back) back.onclick = function () { AA.ui.goBack('dashboard'); };
     AA.ui._bindPush(false);
     const chk = document.getElementById('chkMorning');
     if (chk) chk.onchange = function () { AA.notif.toggleMorning(chk.checked); };
@@ -1207,7 +1277,7 @@
 
   AA.ui._bindCarDetailDemo = function (st) {
     const back = document.querySelector('[data-back]');
-    if (back) back.onclick = function () { AA.ui.navigate('cars'); };
+    if (back) back.onclick = function () { AA.ui.goBack('cars'); };
     const addSvc = document.getElementById('btnAddService');
     if (addSvc) addSvc.onclick = function () { AA.showToast('Mod demo — doar vizualizare', 'info'); };
     document.querySelectorAll('[data-edit-svc]').forEach(function (b) {
@@ -1228,7 +1298,7 @@
 
   AA.ui._bindSettingsDemo = function () {
     const back = document.querySelector('[data-back]');
-    if (back) back.onclick = function () { AA.ui.navigate('dashboard'); };
+    if (back) back.onclick = function () { AA.ui.goBack('dashboard'); };
     AA.ui._bindPush(true);
     document.querySelectorAll('#btnExport,#btnExportPdf,#btnLogout').forEach(function (el) {
       el.onclick = function () { AA.showToast('Mod demo — doar vizualizare', 'info'); };
@@ -1269,11 +1339,12 @@
       }, 120);
     }
     if (view || action) {
-      try { history.replaceState(null, '', location.pathname); } catch (_) {}
+      try { history.replaceState(history.state, '', location.pathname); } catch (_) {}
     }
   };
 
   AA.ui.init = function () {
+    AA.ui._initHistory();
     const finish = function () {
       AA.ui.hideSplash();
       AA.notif.startWatcher();
