@@ -14,6 +14,7 @@ const DB_URL = 'https://autoalert-89b80-default-rtdb.europe-west1.firebasedataba
 const VAPID_PUBLIC = 'BFLq-xIuv3-E4Ue3HZN9b7y1B8w6nFQdtY3BFiVNnQyaLYNIDkZ6vpa6KwFxqGHbxGqDvS1QLsmosjQcuXS_NMo';
 const APP_URL = 'https://mferent80-source.github.io/autoalert/';
 const DRY = process.env.DRY_RUN === '1';
+const TEST = process.env.TEST_PUSH === '1'; // alertă de probă la toate telefoanele abonate
 const DIGEST_FROM = 8;   // rezumatul pleacă la prima rulare după 8:00
 const DIGEST_UNTIL = 21; // după 21:00 nu mai trezim pe nimeni cu rezumatul zilei
 
@@ -106,7 +107,9 @@ async function main() {
     const subs = fam.push || {};
     const subIds = Object.keys(subs);
     if (!subIds.length) continue;
-    const plan = planFamily(fid, fam, now);
+    const plan = TEST
+      ? { msgs: [{ title: 'AutoAlert · probă', body: 'Alertele pe telefon merg. Așa vei primi termenele care se apropie.', tag: 'aa-test', urgent: false, url: './index.html' }], marks: {} }
+      : planFamily(fid, fam, now);
     if (!plan.msgs.length) { Object.assign(updates, plan.marks); continue; }
 
     let okFam = 0;

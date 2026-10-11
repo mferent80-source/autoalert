@@ -6,6 +6,10 @@ on:
     - cron: '7,37 * * * *'
   workflow_dispatch:
     inputs:
+      test_push:
+        description: 'Trimite acum o alertă de probă pe toate telefoanele abonate'
+        type: boolean
+        default: false
       dry_run:
         description: 'Doar probă (nu trimite nimic)'
         type: boolean
@@ -46,6 +50,7 @@ jobs:
           FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
           VAPID_PRIVATE: ${{ secrets.VAPID_PRIVATE }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+          TEST_PUSH: ${{ inputs.test_push && '1' || '0' }}
         run: node send-alerts.mjs
 
       # GitHub oprește programările după 60 de zile fără commit-uri; reactivarea prin API resetează ceasul.
