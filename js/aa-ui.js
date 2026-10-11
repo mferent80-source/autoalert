@@ -11,7 +11,7 @@
   let _demoMode = false;
   let _renderTimer = null;
   let _deepLinkDone = false;
-  let _okCollapsed = false;
+  let _okCollapsed = true;
 
   AA.ui._countCarAlerts = function (car) {
     const c = { expired: 0, urgent: 0, warning: 0, total: 0 };
@@ -50,71 +50,183 @@
     return worst;
   };
 
-  AA.ui._renderAlertSticky = function (agg, alertCars) {
-    if (!alertCars) return '';
-    let cls = 'warn';
-    let text = '';
-    if (agg.expired) {
-      cls = 'danger';
-      text = agg.expired + ' serviciu' + (agg.expired > 1 ? 'i' : '') + ' expirat' + (agg.expired > 1 ? 'e' : '') + ' — verifică azi';
-    } else if (agg.urgent) {
-      cls = 'urgent';
-      text = alertCars + ' mașin' + (alertCars > 1 ? 'i' : 'ă') + ' cu alerte urgente';
-    } else {
-      text = alertCars + ' mașin' + (alertCars > 1 ? 'i' : 'ă') + ' de verificat în curând';
-    }
-    return '<div class="alert-sticky-banner alert-sticky-' + cls + '">' +
-      '<span class="alert-sticky-icon">⚠</span>' +
-      '<span class="alert-sticky-text">' + AA.escapeHtml(text) + '</span></div>';
+  // „o zi”, „5 zile”, „20 de zile”, „1.200 de km”
+  AA.ui._n = function (n, one, many) {
+    n = Math.abs(n);
+    if (n === 1) return one;
+    const r = n % 100;
+    return n.toLocaleString('ro-RO') + ((n >= 20 && (r === 0 || r >= 20)) ? ' de ' : ' ') + many;
   };
 
-  AA.ui._renderCarCard = function (car, id, opts) {
-    opts = opts || {};
-    const worst = AA.getCarWorstStatus(car);
+  AA.ui._de = function (n) {
+    n = Math.abs(n);
+    const r = n % 100;
+    return (n >= 20 && (r === 0 || r >= 20)) ? 'de ' : '';
+  };
+
+  // Citirea unui termen: ce scrie pe rând, ce cifră mare apare pe bord, cât mai e din interval.
+  AA.ui._svcInfo = function (svc, car) {
+    const meta = AA.SERVICE_TYPES[svc.type] || { label: svc.type };
+    const mode = svc.mode || meta.mode || 'date';
+    const today = AA.todayStr();
+    let date = null;
+    let km = null;
+    if ((mode === 'date' || mode === 'both') && svc.nextDate) {
+      const d = AA.diffDays(today, svc.nextDate);
+      if (d != null) date = { left: d, st: AA.statusFromDate(d, svc.warnDaysBefore || meta.warnDaysBefore), at: svc.nextDate };
+    }
+    if ((mode === 'mileage' || mode === 'both') && svc.intervalKm && car && car.currentKm != null) {
+      const due = Number(svc.lastKm || 0) + Number(svc.intervalKm);
+      const k = due - Number(car.currentKm);
+      km = { left: k, st: AA.statusFromKm(k, svc.warnKmBefore ?? meta.warnKmBefore), at: due };
+    }
+    let lead = date || km;
+    if (date && km && (AA.STATUS_RANK[km.st] ?? 3) < (AA.STATUS_RANK[date.st] ?? 3)) lead = km;
+    const other = lead === date ? km : (lead === km ? date : null);
+
+    const fmtDate = function (x) {
+      const n = x.left;
+      if (n < 0) return { text: 'expirat de ' + AA.ui._n(n, 'o zi', 'zile'), num: String(-n), unit: AA.ui._de(n) + (n === -1 ? 'zi' : 'zile') + ' peste termen', sub: AA.formatDate(x.at) };
+      if (n === 0) return { text: 'expiră azi', num: 'Azi', unit: 'e ultima zi', sub: AA.formatDate(x.at) };
+      if (n === 1) return { text: 'expiră mâine', num: '1', unit: 'zi rămasă', sub: AA.formatDate(x.at) };
+      return { text: 'în ' + AA.ui._n(n, 'o zi', 'zile'), num: String(n), unit: AA.ui._de(n) + 'zile rămase', sub: AA.formatDate(x.at) };
+    };
+    const fmtKm = function (x) {
+      const n = x.left;
+      const at = 'la ' + AA.formatKm(x.at);
+      if (n < 0) return { text: 'depășit cu ' + AA.ui._n(n, '1 km', 'km'), num: (-n).toLocaleString('ro-RO'), unit: AA.ui._de(n) + 'km peste interval', sub: at };
+      if (n === 0) return { text: 'la limită', num: '0', unit: 'km rămași', sub: at };
+      return { text: 'încă ' + AA.ui._n(n, '1 km', 'km'), num: n.toLocaleString('ro-RO'), unit: AA.ui._de(n) + 'km rămași', sub: at };
+    };
+
+    const out = {
+      status: AA.getServiceStatus(svc, car),
+      label: meta.label,
+      pct: AA.getServiceProgress(svc, car),
+      text: 'fără termen',
+      sub: 'setează data sau km',
+      num: '—',
+      unit: '',
+      other: ''
+    };
+    if (lead) Object.assign(out, lead === date ? fmtDate(lead) : fmtKm(lead));
+    if (other) out.other = (other === date ? fmtDate(other) : fmtKm(other)).text;
+    return out;
+  };
+
+  // Toate termenele familiei, cele mai grave primele.
+  AA.ui._agenda = function (cars) {
+    const items = [];
+    Object.keys(cars || {}).forEach(function (carId) {
+      const car = cars[carId];
+      Object.keys(car.services || {}).forEach(function (sid) {
+        const svc = car.services[sid];
+        const info = AA.ui._svcInfo(svc, car);
+        items.push({ carId: carId, sid: sid, car: car, svc: svc, info: info });
+      });
+    });
+    items.sort(function (a, b) {
+      const ra = AA.STATUS_RANK[a.info.status] ?? 3;
+      const rb = AA.STATUS_RANK[b.info.status] ?? 3;
+      if (ra !== rb) return ra - rb;
+      const pa = a.info.pct == null ? 101 : a.info.pct;
+      const pb = b.info.pct == null ? 101 : b.info.pct;
+      return pa - pb;
+    });
+    return items;
+  };
+
+  AA.ui._plate = function (plate, size) {
+    const p = AA.formatPlate(plate) || '—';
+    return '<span class="plate' + (size ? ' plate-' + size : '') + '" aria-label="Număr ' + AA.escapeHtml(p) + '">' +
+      '<span class="plate-eu" aria-hidden="true">RO</span><span class="plate-num">' + AA.escapeHtml(p) + '</span></span>';
+  };
+
+  AA.ui._carName = function (car, withYear) {
+    return AA.escapeHtml(AA.formatCarLabel(car.brand, car.model, withYear ? car.year : '')) || 'Mașină';
+  };
+
+  AA.ui._carMeta = function (car) {
     const counts = AA.ui._countCarAlerts(car);
-    const isAlert = worst !== 'ok';
-    const alerts = AA.ui._sortServiceIds(car).map(function (sid) {
-      const svc = car.services[sid];
-      const d = AA.getServiceDetail(svc, car);
-      if (d.status === 'ok' && !opts.showAllServices) return '';
-      const chip = d.status !== 'ok'
-        ? '<span class="svc-status-chip svc-status-chip-' + d.status + '">' + AA.STATUS_LABELS[d.status] + '</span>'
-        : '';
-      return '<div class="svc-row status-' + d.status + (d.status !== 'ok' ? ' svc-row-hot' : '') + '">' +
-        '<div class="svc-row-main">' +
-        '<div class="svc-row-top">' +
-        '<span class="svc-label">' + AA.ui._svcBubble(svc.type, 28) + '<span>' + AA.escapeHtml(d.label) + '</span></span>' +
-        chip +
-        '</div>' +
-        '<span class="svc-meta">' + AA.escapeHtml(d.summary) + '</span>' +
-        AA.ui._progressBar(d.progress, d.status) +
-        '</div></div>';
-    }).filter(Boolean).join('');
+    const n = Object.keys(car.services || {}).length;
+    const right = counts.total
+      ? '<b>' + AA.escapeHtml(AA.ui._alertCountLabel(counts)) + '</b>'
+      : (n ? 'totul în regulă' : 'fără termene');
+    return AA.formatKm(car.currentKm) + ' · ' + right;
+  };
 
-    const accent = AA.ui._carColor(car);
-    const ribbon = isAlert
-      ? '<div class="car-alert-ribbon car-alert-ribbon-' + worst + '">' +
-        '<span class="car-alert-ribbon-icon">!</span>' +
-        '<span>' + AA.escapeHtml(AA.ui._alertCountLabel(counts)) + '</span></div>'
-      : '';
+  AA.ui._carRow = function (car, id) {
+    const worst = AA.getCarWorstStatus(car);
+    return '<div class="car-row st-' + worst + '" data-car="' + id + '" role="button" tabindex="0">' +
+      AA.ui._plate(car.plate) +
+      '<div class="car-row-main">' +
+      '<div class="car-row-name">' + AA.ui._carName(car, true) + '</div>' +
+      '<div class="car-row-meta">' + AA.ui._carMeta(car) + '</div>' +
+      '</div>' +
+      '<span class="dot" aria-hidden="true"></span>' +
+      '</div>';
+  };
 
-    const glow = (isAlert && worst === 'expired') ? ' card-glow-expired' : '';
-    return '<div class="car-card' + (isAlert ? ' car-card-hot car-card-hot-' + worst : ' car-card-ok') +
-      ' status-border-' + worst + glow + '" data-car="' + id + '" style="--car-accent:' + accent + '">' +
-      ribbon +
-      '<div class="car-card-stripe car-card-stripe-' + worst + '"></div>' +
-      '<div class="car-card-body">' +
-      '<div class="car-card-head">' +
-      '<div class="car-thumb" style="background:' + accent + '22;border-color:' + accent + '55">' +
-      AA.ui._svcIcon('car', 22) + '</div>' +
-      '<div class="car-card-id">' +
-      '<span class="plate-chip mono' + (isAlert && worst === 'expired' ? ' plate-chip-alert' : '') + '">' + AA.escapeHtml(AA.formatPlate(car.plate)) + '</span>' +
-      '<span class="car-name">' + AA.escapeHtml(AA.formatCarLabel(car.brand, car.model, '')) + '</span>' +
+  AA.ui._agendaRow = function (it) {
+    return '<div class="row st-' + it.info.status + '" data-car="' + it.carId + '" role="button" tabindex="0">' +
+      AA.ui._svcIcon(it.svc.type, 22) +
+      '<div class="row-main" style="min-width:0">' +
+      '<div class="row-title">' + AA.escapeHtml(it.info.label) + '</div>' +
+      '<div class="row-sub">' + AA.ui._plate(it.car.plate, 'sm') +
+      '<span class="ellip">' + AA.ui._carName(it.car) + '</span></div>' +
       '</div>' +
-      '<span class="badge badge-' + worst + '">' + AA.STATUS_LABELS[worst] + '</span>' +
+      '<div class="row-val"><b>' + AA.escapeHtml(it.info.text) + '</b><span>' + AA.escapeHtml(it.info.sub) + '</span></div>' +
+      '</div>';
+  };
+
+  AA.ui._lampIcon = function (size) {
+    size = size || 22;
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">' +
+      '<circle cx="12" cy="12" r="6"/><path d="M12 9v3.5M12 15.2v.1"/>' +
+      '<path d="M4.6 6.6a9 9 0 000 10.8M19.4 6.6a9 9 0 010 10.8"/></svg>';
+  };
+
+  AA.ui._gearIcon = function () {
+    return '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>';
+  };
+
+  AA.ui._trashIcon = function () {
+    return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/></svg>';
+  };
+
+  // Bordul: cel mai urgent termen, cu cifra mare și butonul „Făcut” la îndemână.
+  AA.ui._dashHero = function (st, agenda) {
+    const carCount = Object.keys(st.cars || {}).length;
+    if (!carCount) {
+      return '<div class="empty"><strong>Adaugă prima mașină</strong>' +
+        'Treci numărul, kilometrii și termenele (ITP, RCA, ulei). Te anunțăm înainte să expire ceva.' +
+        '<button class="btn btn-primary" id="fabAddCar">Adaugă mașină</button></div>';
+    }
+    const top = agenda.find(function (it) { return it.info.status !== 'ok'; });
+    if (!top) {
+      const next = agenda.find(function (it) { return it.info.num !== '—'; });
+      return '<section class="cluster cluster-calm">' +
+        '<h2>Totul e în regulă</h2>' +
+        '<p>' + (next
+          ? 'Următorul termen: ' + AA.escapeHtml(next.info.label) + ' la ' + AA.escapeHtml(AA.formatPlate(next.car.plate)) + ', ' + AA.escapeHtml(next.info.text) + '.'
+          : 'Adaugă termene la mașini ca să-ți putem da de știre.') +
+        '</p></section>';
+    }
+    const i = top.info;
+    return '<section class="cluster st-' + i.status + '" aria-label="Cel mai urgent termen">' +
+      '<div class="cluster-top">' +
+      '<div class="cluster-svc">' + AA.ui._svcIcon(top.svc.type, 24) + AA.escapeHtml(i.label) + '</div>' +
+      '<span class="lamp">' + AA.STATUS_LABELS[i.status] + '</span>' +
       '</div>' +
-      (alerts || '<div class="svc-row status-ok"><span class="svc-label">' + AA.ui._svcBubble('check', 26) + '<span>Nici o alertă activă</span></span></div>') +
-      '</div></div>';
+      '<div class="cluster-read"><span class="cluster-num">' + AA.escapeHtml(i.num) + '</span>' +
+      '<span class="cluster-unit">' + AA.escapeHtml(i.unit) + '<br>' + AA.escapeHtml(i.sub) + '</span></div>' +
+      '<div class="cluster-car">' + AA.ui._plate(top.car.plate) + '<span>' + AA.ui._carName(top.car) + '</span></div>' +
+      '<div class="cluster-actions">' +
+      '<button class="btn btn-done" data-quick-done="' + top.carId + '" data-sid="' + top.sid + '">' + AA.ui._svcIcon('check', 18) + ' Făcut</button>' +
+      '<button class="btn" data-car="' + top.carId + '">Vezi mașina</button>' +
+      '</div></section>';
   };
 
   AA.ui._sortServiceIds = function (car) {
@@ -288,29 +400,6 @@
     return AA.icon && AA.icon.bubble ? AA.icon.bubble(type, size || 30) : AA.ui._svcIcon(type, 18);
   };
 
-  AA.ui._dashHero = function (st, agg) {
-    const name = st.user ? st.user.displayName.split(' ')[0] : '';
-    let mood = 'alert';
-    let msg = 'Totul e în regulă — nici o alertă activă';
-    if (agg.expired) {
-      mood = 'danger';
-      msg = agg.expired + ' alertă' + (agg.expired > 1 ? 'e expirată' : ' expirată') + ' — acționează azi';
-    } else if (agg.urgent) {
-      mood = 'urgent';
-      msg = agg.urgent + ' urgent' + (agg.urgent > 1 ? 'e' : '') + ' — verifică programările';
-    } else if (agg.warning) {
-      mood = 'warn';
-      msg = agg.warning + ' în curând — planifică din timp';
-    }
-    return '<div class="dash-hero dash-hero-' + mood + '">' +
-      '<div class="dash-hero-content">' +
-      '<div class="dash-greet">Bună, ' + AA.escapeHtml(name) + '</div>' +
-      '<div class="dash-mood">' + msg + '</div>' +
-      '</div>' +
-      '<div class="dash-hero-visual">' + (AA.icon ? AA.icon.bubble('wheel', 52) : '') + '</div>' +
-      '</div>';
-  };
-
   AA.ui._ring = function (svc, car, d) {
     if (!AA.icon || !AA.icon.ring) return '';
     return AA.icon.ring(d.progress, d.status, AA.icon.ringLabel(svc, car));
@@ -353,35 +442,32 @@
   AA.ui._renderAuth = function () {
     const cfg = global.AA_FIREBASE_CONFIG || {};
     const wrongProject = cfg.projectId === 'datorietrack';
-    return '<div class="auth-screen">' +
-      '<div class="auth-glow"></div>' +
-      '<div class="center-card auth-card">' +
-      '<div class="auth-icon">' + (AA.icon ? AA.icon.render('wheel', 56) : '') + '</div>' +
-      '<div class="logo">Auto<span>Alert</span></div>' +
-      '<p class="muted">Alerte ITP, RCA, rovinietă, schimburi — pentru toată familia.</p>' +
+    return '<div class="center-card auth-card">' +
+      '<div class="auth-mark">' + AA.ui._plate('AUTO ALERT', 'lg') + '</div>' +
+      '<p class="muted">Termenele mașinilor din familie — ITP, RCA, rovinietă, ulei — într-un singur loc, cu alertă pe telefon înainte să expire.</p>' +
       (wrongProject
         ? '<div class="auth-warn">Proiectul <b>datorietrack</b> e pentru DatorieTrack, nu suportă login Google pentru AutoAlert. Deschide <a href="./setup-firebase.html" target="_blank">setup-firebase.html</a> și creează proiect <b>autoalert</b>.</div>'
         : '') +
-      '<button class="btn btn-primary btn-glow" id="btnGoogle">Continuă cu Google</button>' +
-      '<button class="btn btn-ghost" id="btnDemoAuth">Previzualizare demo</button>' +
+      '<button class="btn btn-primary" id="btnGoogle">Continuă cu Google</button>' +
+      '<button class="btn btn-ghost" id="btnDemoAuth">Vezi cu date de probă</button>' +
       '<p class="ver">v' + AA.APP_VERSION + '</p>' +
-      '</div></div>';
+      '</div>';
   };
 
   AA.ui._renderOnboard = function () {
     return '<div class="center-card">' +
-      '<div class="logo">Auto<span>Alert</span></div>' +
-      '<p class="muted">Creează o familie nouă sau intră cu cod de invitație.</p>' +
+      '<div class="auth-mark">' + AA.ui._plate('AUTO ALERT', 'lg') + '</div>' +
+      '<p class="muted">Creează familia ta sau intră în una existentă cu codul primit.</p>' +
       '<div class="tabs-onboard">' +
       '<button class="tab-btn active" data-tab="create">Creează familie</button>' +
-      '<button class="tab-btn" data-tab="join">Am cod</button>' +
+      '<button class="tab-btn" data-tab="join">Am un cod</button>' +
       '</div>' +
       '<div id="panelCreate">' +
       '<input class="input" id="familyName" placeholder="Nume familie (ex. Familia Popescu)" maxlength="80">' +
-      '<button class="btn btn-primary" id="btnCreateFamily">Creează</button>' +
+      '<button class="btn btn-primary" id="btnCreateFamily">Creează familia</button>' +
       '</div>' +
       '<div id="panelJoin" class="hidden">' +
-      '<input class="input mono" id="inviteCode" placeholder="Cod invitație (6 caractere)" maxlength="6" style="text-transform:uppercase">' +
+      '<input class="input mono" id="inviteCode" placeholder="Codul de 6 caractere" maxlength="6" style="text-transform:uppercase">' +
       '<button class="btn btn-primary" id="btnJoinFamily">Intră în familie</button>' +
       '</div>' +
       '<button class="btn btn-ghost" id="btnLogout">Deconectare</button>' +
@@ -389,34 +475,34 @@
   };
 
   AA.ui._renderHeader = function (st) {
-    const name = st.user ? st.user.displayName.split(' ')[0] : '';
+    const name = st.user ? st.user.displayName : '';
     return '<header class="app-header">' +
-      '<div class="logo-sm">Auto<span>Alert</span></div>' +
+      '<div class="wordmark">' + AA.ui._lampIcon(24) + 'AutoAlert</div>' +
       '<div class="header-actions">' +
-      '<button class="btn-icon" id="btnSettings" title="Setări">⚙️</button>' +
-      (AA.icon ? AA.icon.avatar(st.user.displayName, 28) : '') +
-      '<span class="user-chip">' + AA.escapeHtml(name) + '</span>' +
-      '</div>' +
-      (st.demo ? '<div class="demo-banner">Mod demo — date fictive · <button class="link-btn" id="btnExitDemo">Ieși</button></div>' : '') +
-      (st.offline ? '<div class="offline-banner">Offline — date din cache</div>' : '') +
-      '</header>';
+      '<button class="icon-btn" id="btnSettings" title="Setări" aria-label="Setări">' + AA.ui._gearIcon() + '</button>' +
+      (AA.icon ? AA.icon.avatar(name, 32) : '') +
+      '</div></header>' +
+      (st.demo ? '<div class="strip strip-demo"><span>Date de probă — nimic nu se salvează</span><button class="link-btn" id="btnExitDemo">Ieși</button></div>' : '') +
+      (st.offline ? '<div class="strip strip-offline">Fără internet — vezi ultimele date salvate</div>' : '');
   };
 
   AA.ui._renderNav = function (st) {
     const alertCars = AA.ui._countAlertCars(st.cars);
     const fleetWorst = AA.ui._worstFleetStatus(st.cars);
+    const active = _view === 'car-detail' ? 'cars' : _view;
     const items = [
       { id: 'dashboard', label: 'Acasă', icon: 'home' },
       { id: 'cars', label: 'Mașini', icon: 'car' },
       { id: 'family', label: 'Familie', icon: 'family' }
     ];
-    return '<nav class="bottom-nav">' + items.map(function (it) {
+    return '<nav class="bottom-nav"><div class="bottom-nav-inner">' + items.map(function (it) {
       const badge = (it.id === 'cars' && alertCars)
-        ? '<span class="nav-badge nav-badge-' + fleetWorst + '">' + alertCars + '</span>'
+        ? '<span class="nav-badge st-' + fleetWorst + '">' + alertCars + '</span>'
         : '';
-      return '<button class="nav-btn' + (_view === it.id ? ' active' : '') + '" data-nav="' + it.id + '">' +
-        '<span class="nav-icon">' + AA.ui._svcIcon(it.icon, 22) + badge + '</span>' + it.label + '</button>';
-    }).join('') + '</nav>';
+      return '<button class="nav-btn' + (active === it.id ? ' active' : '') + '" data-nav="' + it.id + '"' +
+        (active === it.id ? ' aria-current="page"' : '') + '>' +
+        '<span class="nav-icon">' + AA.ui._svcIcon(it.icon, 24) + badge + '</span>' + it.label + '</button>';
+    }).join('') + '</div></nav>';
   };
 
   AA.ui._renderView = function (st) {
@@ -428,57 +514,39 @@
   };
 
   AA.ui._renderDashboard = function (st) {
-    const agg = AA.aggregateAlerts(st.cars);
+    const agenda = AA.ui._agenda(st.cars);
     const carIds = Object.keys(st.cars || {}).sort(function (a, b) {
       return AA.STATUS_RANK[AA.getCarWorstStatus(st.cars[a])] - AA.STATUS_RANK[AA.getCarWorstStatus(st.cars[b])];
     });
+    const top = agenda.find(function (it) { return it.info.status !== 'ok'; });
+    const rest = agenda.filter(function (it) { return it !== top; });
+    const now = rest.filter(function (it) { return it.info.status === 'expired' || it.info.status === 'urgent'; });
+    const soon = rest.filter(function (it) { return it.info.status === 'warning'; });
+    const later = rest.filter(function (it) { return it.info.status === 'ok'; });
 
-    const okCount = Object.keys(st.cars || {}).length;
-    const alertIds = carIds.filter(function (id) { return AA.getCarWorstStatus(st.cars[id]) !== 'ok'; });
-    const okIds = carIds.filter(function (id) { return AA.getCarWorstStatus(st.cars[id]) === 'ok'; });
-    const alertCars = alertIds.length;
-
-    const hero = AA.ui._dashHero(st, agg);
-    const sticky = AA.ui._renderAlertSticky(agg, alertCars);
-    const banner = sticky + hero +
-      '<div class="stats-row">' +
-      '<div class="stat-pill stat-danger' + (agg.expired ? ' active' : '') + '">' +
-      '<span class="stat-num">' + agg.expired + '</span><span class="stat-lbl">Expirate</span></div>' +
-      '<div class="stat-pill stat-urgent' + (agg.urgent ? ' active' : '') + '">' +
-      '<span class="stat-num">' + agg.urgent + '</span><span class="stat-lbl">Urgente</span></div>' +
-      '<div class="stat-pill stat-warn' + (agg.warning ? ' active' : '') + '">' +
-      '<span class="stat-num">' + agg.warning + '</span><span class="stat-lbl">Curând</span></div>' +
-      '</div>' +
-      ((agg.expired || agg.urgent || agg.warning) ? '' :
-        '<div class="status-banner ok">' + AA.ui._svcIcon('check', 16) + ' Toate cele ' + okCount + ' mașini sunt în regulă</div>');
-
-    const alertCards = alertIds.map(function (id) {
-      return AA.ui._renderCarCard(st.cars[id], id);
-    }).join('');
-
-    const okCards = okIds.map(function (id) {
-      return AA.ui._renderCarCard(st.cars[id], id);
-    }).join('');
-
-    let sections = '';
-    if (alertIds.length) {
-      sections += '<div class="section-title section-title-alert">' +
-        '<span class="section-alert-icon">⚠</span> Necesită atenție (' + alertIds.length + ')</div>' +
-        '<div class="car-alert-zone">' + alertCards + '</div>';
+    let main = AA.ui._dashHero(st, agenda);
+    if (now.length) {
+      main += '<h2 class="sec">De rezolvat <small>' + now.length + '</small></h2>' +
+        '<div class="rows">' + now.map(AA.ui._agendaRow).join('') + '</div>';
     }
-    if (okIds.length) {
-      const okHidden = alertIds.length > 0 && _okCollapsed;
-      sections += '<button type="button" class="section-title section-title-ok section-toggle' +
-        (okHidden ? ' is-collapsed' : '') + '" id="toggleOkCars">' +
-        '<span>În regulă (' + okIds.length + ')</span>' +
-        '<span class="section-toggle-hint">' + (okHidden ? 'Arată' : 'Ascunde') + '</span>' +
-        '<span class="section-toggle-icon">' + (okHidden ? '▸' : '▾') + '</span></button>' +
-        '<div class="car-ok-zone' + (okHidden ? ' is-collapsed' : '') + '">' + okCards + '</div>';
+    if (soon.length) {
+      main += '<h2 class="sec">În curând <small>' + soon.length + '</small></h2>' +
+        '<div class="rows">' + soon.map(AA.ui._agendaRow).join('') + '</div>';
+    }
+    if (later.length) {
+      const hidden = !!top && _okCollapsed;
+      main += '<button type="button" class="sec sec-toggle" id="toggleOkCars" aria-expanded="' + (!hidden) + '">' +
+        '<span>Mai târziu <small>' + later.length + '</small></span>' +
+        '<small>' + (hidden ? 'Arată ▾' : 'Ascunde ▴') + '</small></button>' +
+        (hidden ? '' : '<div class="rows">' + later.map(AA.ui._agendaRow).join('') + '</div>');
     }
 
-    return banner + sections +
-      (carIds.length ? '' : '<div class="empty">Nicio mașină încă. Adaugă prima mașină.</div>') +
-      '<button class="fab" id="fabAddCar" title="Adaugă mașină">+</button>';
+    if (!carIds.length) return main;
+    const side = '<h2 class="sec">Mașinile <small>' + carIds.length + '</small></h2>' +
+      '<div class="rows">' + carIds.map(function (id) { return AA.ui._carRow(st.cars[id], id); }).join('') + '</div>' +
+      '<button class="add-row" id="fabAddCar">+ Adaugă mașină</button>';
+    return '<div class="dash-grid"><div class="dash-main">' + main + '</div>' +
+      '<aside class="dash-side">' + side + '</aside></div>';
   };
 
   AA.ui._renderCars = function (st) {
@@ -486,56 +554,46 @@
       return AA.STATUS_RANK[AA.getCarWorstStatus(st.cars[a])] - AA.STATUS_RANK[AA.getCarWorstStatus(st.cars[b])];
     });
     if (!ids.length) {
-      return '<div class="empty">Nicio mașină. Apasă + pentru a adăuga.</div>' +
-        '<button class="fab" id="fabAddCar">+</button>';
+      return '<div class="narrow"><h2 class="sec">Mașini</h2><div class="empty"><strong>Nicio mașină încă</strong>' +
+        'Adaugă mașina cu numărul și kilometrii de acum.' +
+        '<button class="btn btn-primary" id="fabAddCar">Adaugă mașină</button></div></div>';
     }
-    return ids.map(function (id) {
-      const car = st.cars[id];
-      const worst = AA.getCarWorstStatus(car);
-      const counts = AA.ui._countCarAlerts(car);
-      const isAlert = worst !== 'ok';
-      const accent = AA.ui._carColor(car);
-      const alertPill = (isAlert && worst !== 'warning')
-        ? '<span class="list-alert-pill list-alert-pill-' + worst + '">' + AA.STATUS_LABELS[worst] + '</span>'
-        : '<span class="status-dot status-dot-lg status-dot-' + worst + '"></span>';
-      return '<div class="list-card' + (isAlert ? ' list-card-hot list-card-hot-' + worst : '') +
-        ' status-border-' + worst + '" data-car="' + id + '" style="--car-accent:' + accent + '">' +
-        '<div class="list-card-stripe list-card-stripe-' + worst + '"></div>' +
-        '<div class="car-thumb car-thumb-sm" style="background:' + accent + '22;border-color:' + accent + '55">' +
-        AA.ui._svcIcon('car', 18) + '</div>' +
-        '<div class="list-card-info">' +
-        '<div class="plate-chip mono' + (isAlert && worst === 'expired' ? ' plate-chip-alert' : '') + '">' + AA.escapeHtml(AA.formatPlate(car.plate)) + '</div>' +
-        '<div class="list-sub">' + AA.escapeHtml(AA.formatCarLabel(car.brand, car.model, '')) +
-        ' · ' + AA.formatKm(car.currentKm) +
-        (isAlert ? ' · <span class="list-alert-count">' + AA.escapeHtml(AA.ui._alertCountLabel(counts)) + '</span>' : '') +
-        '</div></div>' +
-        alertPill + '</div>';
-    }).join('') + '<button class="fab" id="fabAddCar">+</button>';
+    return '<div class="narrow"><h2 class="sec">Mașini <small>' + ids.length + '</small></h2>' +
+      '<div class="rows">' + ids.map(function (id) { return AA.ui._carRow(st.cars[id], id); }).join('') + '</div>' +
+      '<button class="add-row" id="fabAddCar">+ Adaugă mașină</button></div>';
   };
 
   AA.ui._renderCarDetail = function (st) {
     const car = st.cars[_selectedCarId];
-    if (!car) return '<div class="empty">Mașină negăsită.</div>';
+    if (!car) {
+      return '<div class="narrow"><div class="topbar"><button class="back-btn" data-back>‹ Mașini</button></div>' +
+        '<div class="empty"><strong>Mașina nu mai există</strong>Poate a șters-o cineva din familie.</div></div>';
+    }
 
     const services = AA.ui._sortServiceIds(car).map(function (sid) {
       const svc = car.services[sid];
-      const d = AA.getServiceDetail(svc, car);
-      const rem = svc.reminderAt && AA.isReminderActive(svc.reminderAt)
-        ? '<span class="reminder-chip" title="Reminder personalizat">⏰ ' + AA.escapeHtml(AA.formatReminderDisplay(svc.reminderAt)) + '</span>'
-        : '';
-      return '<div class="list-card svc-card status-border-' + d.status + (d.status !== 'ok' ? ' svc-card-hot' : '') + '" data-svc="' + sid + '">' +
-        '<div class="svc-card-layout">' +
-        AA.ui._ring(svc, car, d) +
-        '<div class="svc-card-body">' +
-        '<div class="svc-head"><span class="svc-title">' + AA.ui._svcBubble(svc.type, 34) + '<span>' + AA.escapeHtml(d.label) + '</span></span>' +
-        '<span class="badge badge-' + d.status + '">' + AA.STATUS_LABELS[d.status] + '</span></div>' +
-        '<div class="list-sub">' + AA.escapeHtml(d.summary) + rem + '</div>' +
-        AA.ui._progressBar(d.progress, d.status) +
+      const i = AA.ui._svcInfo(svc, car);
+      const extras = [];
+      if (i.other) extras.push('<span class="chip">și ' + AA.escapeHtml(i.other) + '</span>');
+      if (svc.reminderAt && AA.isReminderActive(svc.reminderAt)) {
+        extras.push('<span class="chip" title="Reminder personalizat">⏰ ' + AA.escapeHtml(AA.formatReminderDisplay(svc.reminderAt)) + '</span>');
+      }
+      if (svc.notes) extras.push('<span class="chip">' + AA.escapeHtml(svc.notes) + '</span>');
+      const gauge = i.pct == null ? '' :
+        '<div class="gauge" aria-hidden="true"><i style="width:' + Math.max(2, Math.round(i.pct)) + '%"></i></div>';
+      return '<div class="svc st-' + i.status + '" data-svc="' + sid + '">' +
+        '<div class="svc-head">' + AA.ui._svcIcon(svc.type, 22) +
+        '<div class="svc-name">' + AA.escapeHtml(i.label) + '</div>' +
+        (i.status !== 'ok' ? '<span class="lamp">' + AA.STATUS_LABELS[i.status] + '</span>' : '') +
+        '</div>' +
+        '<div class="svc-read"><b>' + AA.escapeHtml(i.text) + '</b><span>' + AA.escapeHtml(i.sub) + '</span></div>' +
+        gauge +
+        (extras.length ? '<div class="svc-extra">' + extras.join('') + '</div>' : '') +
         '<div class="svc-actions">' +
-        '<button class="btn btn-sm btn-done" data-done="' + sid + '">' + AA.ui._svcIcon('check', 14) + ' Făcut</button>' +
-        '<button class="btn btn-sm btn-ghost" data-edit-svc="' + sid + '">Editează</button>' +
-        '<button class="btn btn-sm btn-danger" data-del-svc="' + sid + '">Șterge</button>' +
-        '</div></div></div></div>';
+        '<button class="btn btn-sm btn-done" data-done="' + sid + '">' + AA.ui._svcIcon('check', 16) + ' Făcut</button>' +
+        '<button class="btn btn-sm" data-edit-svc="' + sid + '">Editează</button>' +
+        '<button class="btn btn-sm btn-trash" data-del-svc="' + sid + '" title="Șterge termenul" aria-label="Șterge ' + AA.escapeHtml(i.label) + '">' + AA.ui._trashIcon() + '</button>' +
+        '</div></div>';
     }).join('');
 
     const history = Object.keys(car.history || {}).sort(function (a, b) {
@@ -543,56 +601,64 @@
     }).slice(0, 8).map(function (hid) {
       const h = car.history[hid];
       const meta = AA.SERVICE_TYPES[h.type] || { label: h.type };
-      return '<div class="hist-row">' + AA.formatDate(h.doneDate) + ' · ' +
-        AA.escapeHtml(meta.label) + ' · ' + AA.formatKm(h.doneKm) + '</div>';
+      const right = [];
+      if (h.doneKm != null) right.push(AA.formatKm(h.doneKm));
+      if (h.cost) right.push(Number(h.cost).toLocaleString('ro-RO') + ' lei');
+      return '<div class="hist"><time>' + AA.formatDate(h.doneDate) + '</time>' +
+        '<span>' + AA.escapeHtml(meta.label) + '</span><span>' + right.join(' · ') + '</span></div>';
     }).join('');
 
-    const accent = AA.ui._carColor(car);
-    return '<button class="btn btn-ghost back-btn" data-back>← Înapoi</button>' +
-      '<div class="car-toolbar">' +
+    return '<div class="narrow">' +
+      '<div class="topbar">' +
+      '<button class="back-btn" data-back>‹ Mașini</button>' +
       '<button class="btn btn-sm btn-ghost" id="btnEditCar">Editează mașina</button>' +
-      '<button class="btn btn-sm btn-danger" id="btnDelCar">Șterge mașina</button>' +
       '</div>' +
-      '<div class="car-hero" style="--car-accent:' + accent + '">' +
-      '<div class="car-hero-glow"></div>' +
-      '<div class="car-hero-thumb">' + AA.ui._svcIcon('car', 36) + '</div>' +
-      '<div class="plate-chip plate-chip-lg mono">' + AA.escapeHtml(AA.formatPlate(car.plate)) + '</div>' +
-      '<div class="car-hero-sub">' + AA.escapeHtml(AA.formatCarLabel(car.brand, car.model, car.year)) + '</div>' +
+      '<div class="car-id">' + AA.ui._plate(car.plate, 'lg') +
+      '<div class="car-id-sub">' + AA.ui._carName(car, true) + '</div></div>' +
+      '<div class="odo">' +
+      '<div><label for="kmInput">Kilometri la bord</label>' +
+      '<div class="odo-field"><input class="mono" id="kmInput" type="number" inputmode="numeric" min="0" max="999999" value="' + (car.currentKm || 0) + '">' +
+      '<span class="odo-unit">km</span></div></div>' +
+      '<button class="btn btn-sm btn-primary" id="btnSaveKm">Salvează km</button>' +
       '</div>' +
-      '<div class="km-box">' +
-      '<label>Km curent</label>' +
-      '<div class="km-row">' +
-      '<input class="input mono" id="kmInput" type="number" min="0" max="999999" value="' + (car.currentKm || 0) + '">' +
-      '<button class="btn btn-primary" id="btnSaveKm">Salvează</button>' +
-      '</div></div>' +
-      '<div class="section-title">Servicii <button class="btn btn-sm" id="btnAddService">+ Adaugă</button></div>' +
-      (services || '<div class="empty">Niciun serviciu. Adaugă ITP, RCA, ulei…</div>') +
-      (history ? '<div class="section-title">Istoric recent</div>' + history : '');
+      '<h2 class="sec">Termene <button class="btn btn-sm" id="btnAddService">+ Adaugă</button></h2>' +
+      (services ? '<div class="rows">' + services + '</div>' :
+        '<div class="empty"><strong>Niciun termen</strong>Adaugă ITP, RCA, rovinieta sau schimbul de ulei.</div>') +
+      (history ? '<h2 class="sec">Ce s-a făcut</h2><div class="rows">' + history + '</div>' : '') +
+      '<div class="danger-zone"><button class="btn btn-danger-text" id="btnDelCar">Șterge mașina</button></div>' +
+      '</div>';
   };
 
   AA.ui._renderFamily = function (st) {
     const isOwner = st.family && st.user && st.family.ownerUid === st.user.uid;
-    const members = Object.keys(st.members || {}).map(function (uid) {
+    const ids = Object.keys(st.members || {});
+    const members = ids.map(function (uid) {
       const m = st.members[uid];
       return '<div class="member-row">' +
-        (AA.icon ? AA.icon.avatar(m.displayName || uid) : '') +
+        (AA.icon ? AA.icon.avatar(m.displayName || uid, 36) : '') +
         '<span class="member-name">' + AA.escapeHtml(m.displayName || uid) + '</span>' +
-        '<span class="badge">' + (m.role === 'owner' ? 'Owner' : 'Membru') + '</span>' +
+        '<span class="role">' + (m.role === 'owner' ? 'Administrator' : 'Membru') + '</span>' +
         (isOwner && uid !== st.user.uid ?
           '<button class="btn btn-sm btn-danger" data-rm="' + uid + '">Elimină</button>' : '') +
         '</div>';
     }).join('');
 
-    return '<div class="section-title">' + AA.escapeHtml(st.family ? st.family.name : 'Familie') + '</div>' +
-      '<div class="invite-box">' +
-      '<div class="muted">Cod invitație</div>' +
+    return '<div class="narrow">' +
+      '<h2 class="sec">' + AA.escapeHtml(st.family ? st.family.name : 'Familie') + '</h2>' +
+      '<div class="ticket">' +
+      '<p>Codul de invitație</p>' +
       '<div class="invite-code mono">' + AA.escapeHtml(st.family ? st.family.inviteCode : '') + '</div>' +
-      '<button class="btn btn-sm" id="btnCopyCode">Copiază</button>' +
-      (isOwner ? '<button class="btn btn-sm btn-ghost" id="btnRegenCode">Regenerează</button>' : '') +
+      '<div class="ticket-actions">' +
+      '<button class="btn btn-sm" id="btnCopyCode">Copiază codul</button>' +
+      (isOwner ? '<button class="btn btn-sm btn-ghost" id="btnRegenCode">Cod nou</button>' : '') +
       '</div>' +
-      '<div class="section-title">Membri</div>' + members +
-      '<button class="btn btn-ghost btn-danger-text" id="btnLeaveFamily">' +
-      (isOwner ? 'Șterge familia' : 'Părăsește familia') + '</button>';
+      '<p style="margin-top:14px;font-size:14px">Cine intră cu codul vede aceleași mașini și primește aceleași alerte.</p>' +
+      '</div>' +
+      '<h2 class="sec">Membri <small>' + ids.length + '</small></h2>' +
+      '<div class="rows">' + members + '</div>' +
+      '<div class="danger-zone"><button class="btn btn-danger-text" id="btnLeaveFamily">' +
+      (isOwner ? 'Șterge familia' : 'Părăsește familia') + '</button></div>' +
+      '</div>';
   };
 
   AA.ui._renderSettings = function (st) {
@@ -601,34 +667,37 @@
     const live = AA.notif.isLiveEnabled();
     const haptic = AA.notif.isHapticEnabled();
     const sound = AA.notif.isSoundEnabled();
-    return '<button class="btn btn-ghost back-btn" data-back>← Înapoi</button>' +
-      '<div class="section-title">Notificări</div>' +
-      '<label class="toggle-row">' +
-      '<span>Reminder dimineață (7–10)</span>' +
-      '<input type="checkbox" id="chkMorning" ' + (enabled ? 'checked' : '') + '>' +
-      '</label>' +
-      '<label class="toggle-row">' +
-      '<span>Reminder seară (18–20)</span>' +
-      '<input type="checkbox" id="chkEvening" ' + (evening ? 'checked' : '') + '>' +
-      '</label>' +
-      '<label class="toggle-row">' +
-      '<span>Alerte live (L–V, 8–18)</span>' +
-      '<input type="checkbox" id="chkLive" ' + (live ? 'checked' : '') + '>' +
-      '</label>' +
-      '<label class="toggle-row">' +
-      '<span>Vibrație la alerte expirate</span>' +
-      '<input type="checkbox" id="chkHaptic" ' + (haptic ? 'checked' : '') + '>' +
-      '</label>' +
-      '<label class="toggle-row">' +
-      '<span>Sunet la alerte expirate</span>' +
-      '<input type="checkbox" id="chkSound" ' + (sound ? 'checked' : '') + '>' +
-      '</label>' +
-      '<div class="section-title">Export</div>' +
-      '<button class="btn" id="btnExportPdf">Raport PDF (ITP, RCA…)</button>' +
-      '<button class="btn btn-ghost" id="btnExport">Backup JSON</button>' +
-      '<div class="section-title">Cont</div>' +
+    const pushOn = AA.push && AA.push.isOn();
+    const pushOk = AA.push && AA.push.supported();
+    const row = function (id, on, title, hint) {
+      return '<label class="set-row"><span>' + title + (hint ? '<small>' + hint + '</small>' : '') + '</span>' +
+        '<input type="checkbox" id="' + id + '" ' + (on ? 'checked' : '') + '></label>';
+    };
+    return '<div class="narrow">' +
+      '<div class="topbar"><button class="back-btn" data-back>‹ Acasă</button></div>' +
+      '<h2 class="sec">Alerte pe telefon</h2>' +
+      '<label class="set-row set-row-main"><span><b>Primește alerte pe telefon</b>' +
+      '<small>' + (pushOk
+        ? 'Dimineața, după ora 8, primești ce expiră, plus reminderele tale. Merge și cu aplicația închisă.'
+        : 'Browserul ăsta nu primește notificări. Pe Android deschide aplicația în Chrome și pune-o pe ecranul principal.') +
+      '</small></span>' +
+      '<input type="checkbox" id="chkPush" ' + (pushOn ? 'checked' : '') + (pushOk ? '' : ' disabled') + '></label>' +
+      '<div class="set-actions"><button class="btn btn-sm" id="btnTestPush"' + (pushOn ? '' : ' disabled') + '>Trimite o alertă de probă</button></div>' +
+      '<h2 class="sec">Cât timp aplicația e deschisă</h2>' +
+      row('chkMorning', enabled, 'Rezumat dimineața', 'între 7 și 10') +
+      row('chkEvening', evening, 'Rezumat seara', 'între 18 și 20') +
+      row('chkLive', live, 'Alerte în timpul zilei', 'luni–vineri, 8–18, la 30 de minute') +
+      row('chkHaptic', haptic, 'Vibrație la termene expirate', '') +
+      row('chkSound', sound, 'Sunet la termene expirate', '') +
+      '<h2 class="sec">Export</h2>' +
+      '<div class="set-actions">' +
+      '<button class="btn" id="btnExportPdf">Raport PDF</button>' +
+      '<button class="btn btn-ghost" id="btnExport">Copie JSON</button>' +
+      '</div>' +
+      '<h2 class="sec">Cont</h2>' +
       '<button class="btn btn-ghost" id="btnLogout">Deconectare</button>' +
-      '<p class="ver">AutoAlert v' + AA.APP_VERSION + '</p>';
+      '<p class="ver">AutoAlert v' + AA.APP_VERSION + '</p>' +
+      '</div>';
   };
 
   AA.ui._renderModal = function () {
@@ -713,10 +782,10 @@
         const t = AA.SERVICE_TYPES[k];
         const has = existing[k];
         return '<button type="button" class="pick-btn' + (has ? ' pick-btn-has' : '') + '" data-svc-type="' + k + '">' +
-          AA.ui._svcBubble(k, 36) + '<span>' + t.label + (has ? ' <em class="pick-tag">✓</em>' : '') + '</span></button>';
+          AA.ui._svcIcon(k, 22) + '<span>' + t.label + (has ? ' <em class="pick-tag">deja adăugat</em>' : '') + '</span></button>';
       }).join('');
       return '<div class="modal-overlay" id="modalOverlay"><div class="modal modal-lg">' +
-        '<h3>Alege tip serviciu</h3><div class="pick-grid" id="pickServiceGrid">' + opts + '</div>' +
+        '<h3>Ce termen adaugi?</h3><div class="pick-grid" id="pickServiceGrid">' + opts + '</div>' +
         '<button class="btn btn-ghost" id="modalCancel">Anulează</button></div></div>';
     }
     return '';
@@ -783,6 +852,7 @@
   AA.ui._bindMain = function (st) {
     const exitDemo = document.getElementById('btnExitDemo');
     if (exitDemo) exitDemo.onclick = function () { AA.ui.stopDemo(); };
+    AA.ui._bindCommon(st);
 
     if (st.demo) {
       document.querySelectorAll('[data-nav]').forEach(function (b) {
@@ -830,6 +900,56 @@
     if (_view === 'car-detail') AA.ui._bindCarDetail(st);
     if (_view === 'family') AA.ui._bindFamily(st);
     if (_view === 'settings') AA.ui._bindSettings(st);
+  };
+
+  AA.ui._bindCommon = function (st) {
+    // Rândurile cu role=button se deschid și din tastatură
+    document.querySelectorAll('[data-car][role="button"]').forEach(function (el) {
+      el.onkeydown = function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); }
+      };
+    });
+    // „Făcut” direct de pe bord
+    document.querySelectorAll('[data-quick-done]').forEach(function (b) {
+      b.onclick = function (e) {
+        e.stopPropagation();
+        const carId = b.dataset.quickDone;
+        const sid = b.dataset.sid;
+        const car = st.cars && st.cars[carId];
+        const svc = car && car.services ? car.services[sid] : null;
+        if (!svc) return;
+        if (st.demo) { AA.showToast('Mod demo — doar vizualizare', 'info'); return; }
+        _selectedCarId = carId;
+        AA.ui.openModal('mark-done', svc, true, { sid: sid });
+      };
+    });
+  };
+
+  AA.ui._bindPush = function (demo) {
+    const chk = document.getElementById('chkPush');
+    const test = document.getElementById('btnTestPush');
+    if (chk) chk.onchange = async function () {
+      if (demo) { chk.checked = false; AA.showToast('Mod demo — intră în cont ca să pornești alertele', 'info'); return; }
+      chk.disabled = true;
+      try {
+        if (chk.checked) {
+          await AA.push.enable();
+          AA.showToast('Alertele pe telefon sunt pornite', 'success');
+        } else {
+          await AA.push.disable();
+          AA.showToast('Alertele pe telefon sunt oprite', 'info');
+        }
+      } catch (e) {
+        chk.checked = AA.push.isOn();
+        AA.showToast((e && e.message) || 'Nu am putut porni alertele', 'error');
+      }
+      chk.disabled = false;
+      if (test) test.disabled = !AA.push.isOn();
+    };
+    if (test) test.onclick = async function () {
+      try { await AA.push.test(); }
+      catch (e) { AA.showToast((e && e.message) || 'Proba nu a mers', 'error'); }
+    };
   };
 
   AA.ui._bindCarDetail = function (st) {
@@ -927,6 +1047,7 @@
   AA.ui._bindSettings = function (st) {
     const back = document.querySelector('[data-back]');
     if (back) back.onclick = function () { AA.ui.navigate('dashboard'); };
+    AA.ui._bindPush(false);
     const chk = document.getElementById('chkMorning');
     if (chk) chk.onchange = function () { AA.notif.toggleMorning(chk.checked); };
     const chkE = document.getElementById('chkEvening');
@@ -1100,11 +1221,15 @@
     });
     const saveKm = document.getElementById('btnSaveKm');
     if (saveKm) saveKm.onclick = function () { AA.showToast('Mod demo — doar vizualizare', 'info'); };
+    document.querySelectorAll('[data-del-svc],#btnEditCar,#btnDelCar').forEach(function (b) {
+      b.onclick = function () { AA.showToast('Mod demo — doar vizualizare', 'info'); };
+    });
   };
 
   AA.ui._bindSettingsDemo = function () {
     const back = document.querySelector('[data-back]');
     if (back) back.onclick = function () { AA.ui.navigate('dashboard'); };
+    AA.ui._bindPush(true);
     document.querySelectorAll('#btnExport,#btnExportPdf,#btnLogout').forEach(function (el) {
       el.onclick = function () { AA.showToast('Mod demo — doar vizualizare', 'info'); };
     });
@@ -1152,6 +1277,7 @@
     const finish = function () {
       AA.ui.hideSplash();
       AA.notif.startWatcher();
+      if (AA.push) setTimeout(AA.push.resync, 3000);
       if (_view === 'loading') AA.ui.navigate('dashboard');
     };
     if ('serviceWorker' in navigator) {

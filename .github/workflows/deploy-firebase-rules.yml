@@ -14,9 +14,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy database rules
-        uses: w9jds/firebase-action@master
+      - uses: actions/setup-node@v4
         with:
-          args: deploy --only database --project autoalert-89b80
+          node-version: 20
+
+      - name: Deploy database rules
         env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+        run: |
+          printf '%s' "$FIREBASE_SA" > "$RUNNER_TEMP/sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          npx --yes firebase-tools@13 deploy --only database --project autoalert-89b80 --non-interactive
+          rm -f "$RUNNER_TEMP/sa.json"

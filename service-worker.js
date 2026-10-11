@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1.8.0';
+const CACHE_VERSION = 'v1.9.0';
 const CACHE_SHELL = 'aa-shell-' + CACHE_VERSION;
 
 const SHELL_URLS = [
@@ -8,12 +8,13 @@ const SHELL_URLS = [
   './icon.svg',
   './icon-192.png',
   './version.json',
-  './css/aa-v1.0.css',
+  './css/aa-v2.css',
   './js/aa-core.js',
   './js/aa-icons.js',
   './js/aa-alerts.js',
   './js/aa-firebase.js',
   './js/aa-cars.js',
+  './js/aa-push.js',
   './js/aa-notifications.js',
   './js/aa-export.js',
   './js/aa-ui.js',
@@ -100,7 +101,7 @@ self.addEventListener('periodicsync', function (e) {
 });
 
 self.addEventListener('push', function (e) {
-  var data = { title: 'AutoAlert', body: 'Ai alerte noi de verificat.' };
+  var data = { title: 'AutoAlert', body: 'Ai termene de verificat.' };
   try {
     if (e.data) data = Object.assign(data, e.data.json());
   } catch (_) {}
@@ -109,7 +110,10 @@ self.addEventListener('push', function (e) {
       body: data.body,
       icon: './icon-192.png',
       badge: './icon-192.png',
-      data: { url: './index.html' }
+      tag: data.tag || 'aa-push',
+      renotify: true,
+      vibrate: data.urgent ? [120, 60, 120, 60, 200] : [80, 40, 80],
+      data: { url: data.url || './index.html' }
     })
   );
 });

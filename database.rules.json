@@ -48,6 +48,23 @@
           }
         },
 
+        "push": {
+          "$subId": {
+            ".validate": "!newData.exists() || (newData.hasChildren(['endpoint', 'p256dh', 'auth', 'uid']) && newData.child('uid').val() === auth.uid)",
+            "endpoint": { ".validate": "newData.isString() && newData.val().beginsWith('https://') && newData.val().length <= 800" },
+            "p256dh": { ".validate": "newData.isString() && newData.val().length <= 200" },
+            "auth": { ".validate": "newData.isString() && newData.val().length <= 100" },
+            "uid": { ".validate": "newData.isString() && newData.val().length <= 128" },
+            "ua": { ".validate": "newData.isString() && newData.val().length <= 120" },
+            "createdAt": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
+          }
+        },
+
+        "pushLog": {
+          ".validate": "false"
+        },
+
         "cars": {
           "$carId": {
             ".write": "auth != null && root.child('families').child($familyId).child('members').child(auth.uid).exists()",
@@ -86,7 +103,8 @@
                 "updatedAt": { ".validate": "newData.isNumber()" },
                 "reminderAt": { ".validate": "!newData.exists() || (newData.isString() && newData.val().length >= 11 && newData.val().length <= 16)" },
                 "reminderNote": { ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 200)" },
-                "reminderFired": { ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 16)" }
+                "reminderFired": { ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 16)" },
+                "reminderPushed": { ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 16)" }
               }
             },
 

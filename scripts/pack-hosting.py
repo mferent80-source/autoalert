@@ -11,9 +11,9 @@ ZIP_PATH = ROOT / "AutoAlert-hosting.zip"
 INCLUDE = [
     "index.html", "manifest.json", "service-worker.js", "version.json",
     "firebase-config.js", "icon.svg", "icon-192.png", "icon-512.png",
-    "css/aa-v1.0.css",
+    "css/aa-v2.css",
     "js/aa-core.js", "js/aa-alerts.js", "js/aa-firebase.js",
-    "js/aa-cars.js", "js/aa-notifications.js", "js/aa-ui.js", "js/aa-icons.js",
+    "js/aa-cars.js", "js/aa-push.js", "js/aa-notifications.js", "js/aa-ui.js", "js/aa-icons.js",
 ]
 
 def main():

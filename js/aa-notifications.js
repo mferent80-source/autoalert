@@ -199,7 +199,7 @@
       AA.notif.playAlertSound(false);
     }
 
-    new Notification(title, {
+    AA.push.show(title, {
       body: AA.notif._buildBody(agg),
       icon: './icon-192.png',
       badge: './icon-192.png',
@@ -264,6 +264,7 @@
         const svc = car.services[sid];
         if (!svc.reminderAt) continue;
         if (svc.reminderFired === svc.reminderAt) continue;
+        if (svc.reminderPushed === svc.reminderAt) continue;
         const localKey = 'aa_rem_fired_' + carId + '_' + sid;
         if (localStorage.getItem(localKey) === svc.reminderAt) continue;
 
@@ -276,7 +277,7 @@
         if (svc.reminderNote) body = svc.reminderNote + '\n' + body;
         body += '\n' + d.summary;
 
-        new Notification('⏰ Reminder AutoAlert', {
+        await AA.push.show('⏰ Reminder AutoAlert', {
           body: body,
           icon: './icon-192.png',
           badge: './icon-192.png',

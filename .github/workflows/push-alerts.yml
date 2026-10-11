@@ -1,0 +1,56 @@
+name: Alerte pe telefon (Web Push)
+
+# La 30 de minute: rezumatul de dimineață (o dată pe zi, după 8:00) + reminderele personalizate.
+on:
+  schedule:
+    - cron: '7,37 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Doar probă (nu trimite nimic)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: push-alerts
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TZ: Europe/Bucharest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalează dependențele
+        working-directory: scripts/push
+        run: npm install --no-audit --no-fund
+
+      - name: Teste
+        working-directory: scripts/push
+        run: npm test
+
+      - name: Trimite alertele
+        working-directory: scripts/push
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+          VAPID_PRIVATE: ${{ secrets.VAPID_PRIVATE }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+        run: node send-alerts.mjs
+
+      # GitHub oprește programările după 60 de zile fără commit-uri; reactivarea prin API resetează ceasul.
+      - name: Ține programarea activă
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/push-alerts.yml/enable" || true

@@ -5,50 +5,42 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#0d0f12">
+  <meta name="theme-color" content="#121417">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://www.gstatic.com">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <title>AutoAlert</title>
-  <link rel="stylesheet" href="css/aa-v1.0.css?v=1.5.0">
+  <link rel="stylesheet" href="css/aa-v2.css?v=1.6.0">
 </head>
 <body>
   <div id="splash" class="splash">
-    <div class="splash-glow"></div>
-    <div class="splash-wheel">
-      <svg viewBox="0 0 100 100" width="72" height="72" aria-hidden="true">
-        <circle cx="50" cy="50" r="42" fill="none" stroke="#f97316" stroke-width="4"/>
-        <circle cx="50" cy="50" r="8" fill="#f97316"/>
-        <path d="M50 12 L50 88 M12 50 L88 50" stroke="#3b82f6" stroke-width="3" stroke-linecap="round"/>
-        <circle cx="50" cy="12" r="5" fill="#e8eaef"/>
-        <circle cx="50" cy="88" r="5" fill="#e8eaef"/>
-        <circle cx="12" cy="50" r="5" fill="#e8eaef"/>
-        <circle cx="88" cy="50" r="5" fill="#e8eaef"/>
-      </svg>
-    </div>
-    <div class="splash-title">Auto<span>Alert</span></div>
-    <div class="splash-tagline">Alerte auto pentru familie</div>
-    <div class="splash-loader"><span></span><span></span><span></span></div>
+    <svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="#f2a33a" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="6"/><path d="M12 9v3.5M12 15.2v.1"/>
+      <path d="M4.6 6.6a9 9 0 000 10.8M19.4 6.6a9 9 0 010 10.8"/>
+    </svg>
+    <div class="splash-title">AutoAlert</div>
+    <div class="splash-tagline">Termenele mașinilor din familie</div>
   </div>
 
   <div id="app"></div>
   <div id="toastContainer"></div>
 
-  <script src="firebase-config.js?v=1.5.0" onerror="console.warn('firebase-config.js lipsă — copiază din firebase-config.example.js')"></script>
-  <script src="js/aa-core.js?v=1.5.0"></script>
-  <script src="js/aa-icons.js?v=1.5.0"></script>
-  <script src="js/aa-alerts.js?v=1.5.0"></script>
-  <script src="js/aa-firebase.js?v=1.5.0"></script>
-  <script src="js/aa-cars.js?v=1.5.0"></script>
-  <script src="js/aa-notifications.js?v=1.5.0"></script>
-  <script src="js/aa-export.js?v=1.5.0"></script>
-  <script src="js/aa-ui.js?v=1.5.0"></script>
+  <script src="firebase-config.js?v=1.6.0" onerror="console.warn('firebase-config.js lipsă — copiază din firebase-config.example.js')"></script>
+  <script src="js/aa-core.js?v=1.6.0"></script>
+  <script src="js/aa-icons.js?v=1.6.0"></script>
+  <script src="js/aa-alerts.js?v=1.6.0"></script>
+  <script src="js/aa-firebase.js?v=1.6.0"></script>
+  <script src="js/aa-cars.js?v=1.6.0"></script>
+  <script src="js/aa-push.js?v=1.6.0"></script>
+  <script src="js/aa-notifications.js?v=1.6.0"></script>
+  <script src="js/aa-export.js?v=1.6.0"></script>
+  <script src="js/aa-ui.js?v=1.6.0"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./service-worker.js?v=1.5.0').catch(function (e) {
+        navigator.serviceWorker.register('./service-worker.js?v=1.6.0').catch(function (e) {
           console.warn('SW register failed', e);
         });
       });

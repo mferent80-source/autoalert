@@ -3,3 +3,4 @@ firebase-config.js
 AutoAlert-hosting.zip
 hosting-package/
 *.zip
+scripts/push/node_modules/
