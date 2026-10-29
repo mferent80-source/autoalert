@@ -191,7 +191,7 @@
 
   AA.ui._carRow = function (car, id) {
     const worst = AA.getCarWorstStatus(car);
-    return '<div class="car-row st-' + worst + '" data-car="' + id + '" role="button" tabindex="0">' +
+    return '<div class="car-row st-' + worst + '" data-car="' + AA.escapeHtml(id) + '" role="button" tabindex="0">' +
       AA.ui._plate(car.plate) +
       '<div class="car-row-main">' +
       '<div class="car-row-name">' + AA.ui._carName(car, true) + '</div>' +
@@ -202,7 +202,7 @@
   };
 
   AA.ui._agendaRow = function (it) {
-    return '<div class="row st-' + it.info.status + '" data-car="' + it.carId + '" role="button" tabindex="0">' +
+    return '<div class="row st-' + it.info.status + '" data-car="' + AA.escapeHtml(it.carId) + '" role="button" tabindex="0">' +
       AA.ui._svcIcon(it.svc.type, 22) +
       '<div class="row-main" style="min-width:0">' +
       '<div class="row-title">' + AA.escapeHtml(it.info.label) + '</div>' +
@@ -258,8 +258,8 @@
       '<span class="cluster-unit">' + AA.escapeHtml(i.unit) + '<br>' + AA.escapeHtml(i.sub) + '</span></div>' +
       '<div class="cluster-car">' + AA.ui._plate(top.car.plate) + '<span>' + AA.ui._carName(top.car) + '</span></div>' +
       '<div class="cluster-actions">' +
-      (top.tid ? '' : '<button class="btn btn-done" data-quick-done="' + top.carId + '" data-sid="' + top.sid + '">' + AA.ui._svcIcon('check', 18) + ' Făcut</button>') +
-      '<button class="btn" data-car="' + top.carId + '">Vezi mașina</button>' +
+      (top.tid ? '' : '<button class="btn btn-done" data-quick-done="' + AA.escapeHtml(top.carId) + '" data-sid="' + AA.escapeHtml(top.sid) + '">' + AA.ui._svcIcon('check', 18) + ' Făcut</button>') +
+      '<button class="btn" data-car="' + AA.escapeHtml(top.carId) + '">Vezi mașina</button>' +
       '</div></section>';
   };
 
@@ -522,7 +522,7 @@
   };
 
   AA.ui.animateDone = function (sid) {
-    const el = document.querySelector('[data-svc="' + sid + '"]');
+    const el = document.querySelector('[data-svc="' + (global.CSS && CSS.escape ? CSS.escape(sid) : sid) + '"]');
     if (!el) return;
     el.classList.add('svc-done-flash');
     const burst = document.createElement('div');
@@ -693,7 +693,7 @@
       if (svc.notes) extras.push('<span class="chip">' + AA.escapeHtml(svc.notes) + '</span>');
       const gauge = i.pct == null ? '' :
         '<div class="gauge" aria-hidden="true"><i style="width:' + Math.max(2, Math.round(i.pct)) + '%"></i></div>';
-      return '<div class="svc st-' + i.status + '" data-svc="' + sid + '">' +
+      return '<div class="svc st-' + i.status + '" data-svc="' + AA.escapeHtml(sid) + '">' +
         '<div class="svc-head">' + AA.ui._svcIcon(svc.type, 22) +
         '<div class="svc-name">' + AA.escapeHtml(i.label) + '</div>' +
         (i.status !== 'ok' ? '<span class="lamp">' + AA.STATUS_LABELS[i.status] + '</span>' : '') +
@@ -702,9 +702,9 @@
         gauge +
         (extras.length ? '<div class="svc-extra">' + extras.join('') + '</div>' : '') +
         '<div class="svc-actions">' +
-        '<button class="btn btn-sm btn-done" data-done="' + sid + '">' + AA.ui._svcIcon('check', 16) + ' Făcut</button>' +
-        '<button class="btn btn-sm" data-edit-svc="' + sid + '">Editează</button>' +
-        '<button class="btn btn-sm btn-trash" data-del-svc="' + sid + '" title="Șterge termenul" aria-label="Șterge ' + AA.escapeHtml(i.label) + '">' + AA.ui._trashIcon() + '</button>' +
+        '<button class="btn btn-sm btn-done" data-done="' + AA.escapeHtml(sid) + '">' + AA.ui._svcIcon('check', 16) + ' Făcut</button>' +
+        '<button class="btn btn-sm" data-edit-svc="' + AA.escapeHtml(sid) + '">Editează</button>' +
+        '<button class="btn btn-sm btn-trash" data-del-svc="' + AA.escapeHtml(sid) + '" title="Șterge termenul" aria-label="Șterge ' + AA.escapeHtml(i.label) + '">' + AA.ui._trashIcon() + '</button>' +
         '</div></div>';
     }).join('');
 
@@ -722,7 +722,7 @@
       if (t.mounted) extras.push('<span class="chip chip-on">montat acum</span>');
       if (t.location) extras.push('<span class="chip">stă: ' + AA.escapeHtml(t.location) + '</span>');
       if (t.notes) extras.push('<span class="chip">' + AA.escapeHtml(t.notes) + '</span>');
-      return '<div class="svc st-' + s.status + '" data-tire="' + tid + '">' +
+      return '<div class="svc st-' + s.status + '" data-tire="' + AA.escapeHtml(tid) + '">' +
         '<div class="svc-head">' + AA.ui._svcIcon(AA.ui._tireIcon(t.season), 22) +
         '<div class="svc-name">' + AA.escapeHtml(name) + '</div>' +
         (s.status !== 'ok' ? '<span class="lamp">' + AA.STATUS_LABELS[s.status] + '</span>' : '') +
@@ -730,9 +730,9 @@
         '<div class="svc-read"><b>' + AA.escapeHtml(s.text) + '</b><span>' + AA.escapeHtml(s.hint) + '</span></div>' +
         (extras.length ? '<div class="svc-extra">' + extras.join('') + '</div>' : '') +
         '<div class="svc-actions">' +
-        (t.mounted ? '' : '<button class="btn btn-sm btn-done" data-mount="' + tid + '">' + AA.ui._svcIcon('check', 16) + ' Am montat</button>') +
-        '<button class="btn btn-sm" data-edit-tire="' + tid + '">Editează</button>' +
-        '<button class="btn btn-sm btn-trash" data-del-tire="' + tid + '" title="Șterge setul" aria-label="Șterge setul ' + AA.escapeHtml(name) + '">' + AA.ui._trashIcon() + '</button>' +
+        (t.mounted ? '' : '<button class="btn btn-sm btn-done" data-mount="' + AA.escapeHtml(tid) + '">' + AA.ui._svcIcon('check', 16) + ' Am montat</button>') +
+        '<button class="btn btn-sm" data-edit-tire="' + AA.escapeHtml(tid) + '">Editează</button>' +
+        '<button class="btn btn-sm btn-trash" data-del-tire="' + AA.escapeHtml(tid) + '" title="Șterge setul" aria-label="Șterge setul ' + AA.escapeHtml(name) + '">' + AA.ui._trashIcon() + '</button>' +
         '</div></div>';
     }).join('');
 
@@ -760,7 +760,7 @@
       const smalls = [];
       if (h.shop) smalls.push(h.shop);
       if (h.notes) smalls.push(h.notes);
-      history += '<button type="button" class="hist hist-btn" data-hist="' + hid + '">' +
+      history += '<button type="button" class="hist hist-btn" data-hist="' + AA.escapeHtml(hid) + '">' +
         '<time>' + AA.formatDate(h.doneDate) + '</time>' +
         '<span class="hist-what">' + AA.escapeHtml(AA.carnet.historyLabel(h)) +
         (smalls.length ? '<small>' + AA.escapeHtml(smalls.join(' · ')) + '</small>' : '') + '</span>' +
@@ -816,7 +816,7 @@
         '<span class="member-name">' + AA.escapeHtml(m.displayName || uid) + '</span>' +
         '<span class="role">' + (m.role === 'owner' ? 'Administrator' : 'Membru') + '</span>' +
         (isOwner && uid !== st.user.uid ?
-          '<button class="btn btn-sm btn-danger" data-rm="' + uid + '">Elimină</button>' : '') +
+          '<button class="btn btn-sm btn-danger" data-rm="' + AA.escapeHtml(uid) + '">Elimină</button>' : '') +
         '</div>';
     }).join('');
 

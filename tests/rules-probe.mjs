@@ -62,5 +62,10 @@ await expect('REFUZ: profil ca text', await req('PATCH', C + '/tires/t1', { trea
 await expect('REFUZ: tip de termen inventat', await req('PUT', C + '/services/s9', { type: 'vopsea' }, 'u1'), 'refuz');
 await expect('REFUZ: străin scrie anvelope', await req('PUT', C + '/tires/t3', { season: 'vara' }, 'u2'), 'refuz');
 
+await expect('REFUZ: cheie cu ghilimele în carnet', await req('PUT', C + '/history/x%22%3E%3Cimg', { type: 'ulei', doneDate: '2026-10-29' }, 'u1'), 'refuz');
+await expect('REFUZ: cheie cu ghilimele la anvelope', await req('PUT', C + '/tires/x%22onclick', { season: 'vara' }, 'u1'), 'refuz');
+await expect('REFUZ: cheie cu ghilimele la termene', await req('PUT', C + '/services/x%22y', { type: 'itp' }, 'u1'), 'refuz');
+await expect('cheie ca a aplicației (genId) trece', await req('PUT', C + '/history/mf1k2x9abc123', { type: 'ulei', doneDate: '2026-10-29' }, 'u1'), 'ok');
+
 console.log(fails ? fails + ' GREȘITE' : 'toate probele regulilor trec');
 process.exit(fails ? 1 : 0);
