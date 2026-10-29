@@ -5,17 +5,33 @@
   const AA = global.AA || {};
 
   AA.SERVICE_TYPES = {
-    itp:          { label: 'ITP', icon: '🔧', mode: 'date',    warnDaysBefore: [30, 14, 7], intervalMonths: 24 },
-    rca:          { label: 'RCA', icon: '🛡️', mode: 'date',    warnDaysBefore: [30, 14], intervalMonths: 12 },
-    casco:        { label: 'CASCO', icon: '🛡️', mode: 'date',  warnDaysBefore: [30, 14], intervalMonths: 12 },
-    rovigneta:    { label: 'Rovinietă', icon: '🛣️', mode: 'date', warnDaysBefore: [14, 7, 3], intervalMonths: 12 },
-    taxa_pod:     { label: 'Taxă pod Fetești', icon: '🌉', mode: 'date', warnDaysBefore: [14, 7], intervalMonths: 12 },
+    itp:          { label: 'ITP', icon: '🔧', mode: 'date',    warnDaysBefore: [30, 14, 7], intervalMonths: 24, valid: ['m6', 'm12', 'm24', 'm36'] },
+    rca:          { label: 'RCA', icon: '🛡️', mode: 'date',    warnDaysBefore: [30, 14], intervalMonths: 12, valid: ['m1', 'm3', 'm6', 'm12'] },
+    casco:        { label: 'CASCO', icon: '🛡️', mode: 'date',  warnDaysBefore: [30, 14], intervalMonths: 12, valid: ['m1', 'm3', 'm6', 'm12'] },
+    rovigneta:    { label: 'Rovinietă', icon: '🛣️', mode: 'date', warnDaysBefore: [14, 7, 3], intervalMonths: 12, valid: ['d1', 'd7', 'd30', 'd90', 'm12'] },
+    taxa_pod:     { label: 'Taxă pod Fetești', icon: '🌉', mode: 'date', warnDaysBefore: [14, 7], intervalMonths: 12, valid: ['d1', 'm6', 'm12'] },
     ulei:         { label: 'Schimb ulei', icon: '🛢️', mode: 'mileage', warnKmBefore: 1000, defaultIntervalKm: 10000 },
     filtre:       { label: 'Filtre', icon: '💨', mode: 'mileage', warnKmBefore: 500, defaultIntervalKm: 15000 },
     distributie:  { label: 'Distribuție', icon: '⚙️', mode: 'mileage', warnKmBefore: 2000, defaultIntervalKm: 90000 },
-    revizie:      { label: 'Revizie', icon: '🔩', mode: 'both', warnDaysBefore: [30], warnKmBefore: 1000, defaultIntervalKm: 15000, intervalMonths: 12 },
+    revizie:      { label: 'Revizie', icon: '🔩', mode: 'both', warnDaysBefore: [30], warnKmBefore: 1000, defaultIntervalKm: 15000, intervalMonths: 12, valid: ['m6', 'm12', 'm24'] },
     roata_iarna:  { label: 'Anvelope iarnă', icon: '❄️', mode: 'date', warnDaysBefore: [14], suggestMonth: 10, suggestDay: 1 },
-    roata_vara:   { label: 'Anvelope vară', icon: '☀️', mode: 'date', warnDaysBefore: [14], suggestMonth: 4, suggestDay: 1 }
+    roata_vara:   { label: 'Anvelope vară', icon: '☀️', mode: 'date', warnDaysBefore: [14], suggestMonth: 4, suggestDay: 1 },
+    placute:      { label: 'Plăcuțe frână', icon: '🛑', mode: 'mileage', warnKmBefore: 2000, defaultIntervalKm: 40000 },
+    lichid_frana: { label: 'Lichid frână', icon: '💧', mode: 'date', warnDaysBefore: [30, 14], intervalMonths: 24, valid: ['m12', 'm24', 'm36'] },
+    antigel:      { label: 'Antigel', icon: '🧊', mode: 'date', warnDaysBefore: [30], intervalMonths: 36, valid: ['m12', 'm24', 'm36', 'm60'] },
+    baterie:      { label: 'Baterie', icon: '🔋', mode: 'date', warnDaysBefore: [30], intervalMonths: 48, valid: ['m12', 'm24', 'm36', 'm48', 'm60'] },
+    ac:           { label: 'Revizie AC', icon: '❄️', mode: 'date', warnDaysBefore: [30], intervalMonths: 24, valid: ['m12', 'm24'] },
+    trusa:        { label: 'Trusă medicală', icon: '🩹', mode: 'date', warnDaysBefore: [30, 7], intervalMonths: 36, valid: ['m12', 'm24', 'm36', 'm48', 'm60'] },
+    extinctor:    { label: 'Extinctor', icon: '🧯', mode: 'date', warnDaysBefore: [30, 7], intervalMonths: 12, valid: ['m6', 'm12', 'm24'] },
+    impozit:      { label: 'Impozit auto', icon: '🏛️', mode: 'date', warnDaysBefore: [30, 14, 7], suggestMonth: 3, suggestDay: 31 },
+    permis:       { label: 'Permis conducere', icon: '🪪', mode: 'date', warnDaysBefore: [60, 30], intervalMonths: 120, valid: ['m60', 'm120', 'm180'] }
+  };
+
+  // ITP: mașinile de peste 12 ani merg anual; restul, intervalul tipului.
+  AA.defaultIntervalMonths = function (type, car) {
+    const meta = AA.SERVICE_TYPES[type] || {};
+    if (type === 'itp' && car && car.year && (new Date().getFullYear() - Number(car.year)) > 12) return 12;
+    return meta.intervalMonths || 0;
   };
 
   AA.STATUS_RANK = { expired: 0, urgent: 1, warning: 2, ok: 3 };
@@ -112,11 +128,17 @@
     };
   };
 
+  // Profilul setului montat contează ca un termen; aa-carnet.js trebuie încărcat.
+  AA.tireItemsOf = function (car) {
+    return AA.carnet && AA.carnet.tireAlertItems ? AA.carnet.tireAlertItems(car) : [];
+  };
+
   AA.getCarWorstStatus = function (car) {
     const services = car.services || {};
-    const list = Object.keys(services).map(function (k) { return services[k]; });
+    const list = Object.keys(services).map(function (k) { return AA.getServiceStatus(services[k], car); });
+    AA.tireItemsOf(car).forEach(function (t) { list.push(t.st.status); });
     if (!list.length) return 'ok';
-    return AA.worstStatus(list.map(function (s) { return AA.getServiceStatus(s, car); }));
+    return AA.worstStatus(list);
   };
 
   AA.aggregateAlerts = function (cars) {
@@ -143,6 +165,24 @@
             icon: d.icon
           });
         }
+      });
+      AA.tireItemsOf(car).forEach(function (t) {
+        const st = t.st.status;
+        if (st === 'ok') return;
+        if (st === 'expired') expired++;
+        else if (st === 'urgent') urgent++;
+        else warning++;
+        items.push({
+          carId: carId,
+          serviceId: 'tire:' + t.tid,
+          tireId: t.tid,
+          plate: AA.formatPlate(car.plate),
+          carLabel: AA.formatCarLabel(car.brand, car.model, ''),
+          status: st,
+          summary: t.st.text,
+          label: t.st.label,
+          icon: '🛞'
+        });
       });
     });
     items.sort(function (a, b) {

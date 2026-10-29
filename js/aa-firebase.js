@@ -378,7 +378,7 @@
     if (!_user || !_state.familyId) throw new Error('Fără familie');
     const { ref, update } = AA.fb._api;
     const payload = Object.assign({}, data);
-    const nested = /\/services\//.test(path) || /\/history\//.test(path);
+    const nested = /\/(services|history|tires)\//.test(path);
     payload.updatedAt = Date.now();
     if (!nested) payload.updatedBy = _user.uid;
     const clean = AA.cleanRtdb(payload);

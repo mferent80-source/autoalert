@@ -3,7 +3,7 @@
   'use strict';
 
   const AA = global.AA || {};
-  AA.APP_VERSION = '1.6.1';
+  AA.APP_VERSION = '1.7.0';
 
   AA.LS = {
     morningNotif: 'aa_morning_notif',
@@ -55,10 +55,15 @@
       String(d.getDate()).padStart(2, '0');
   };
 
+  // 31 ian + 1 lună = 28/29 feb (capătul lunii), nu 3 martie.
   AA.addMonths = function (dateStr, months) {
     const d = AA.parseDate(dateStr);
     if (!d) return '';
+    const day = d.getDate();
+    d.setDate(1);
     d.setMonth(d.getMonth() + months);
+    const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    d.setDate(Math.min(day, last));
     return d.getFullYear() + '-' +
       String(d.getMonth() + 1).padStart(2, '0') + '-' +
       String(d.getDate()).padStart(2, '0');

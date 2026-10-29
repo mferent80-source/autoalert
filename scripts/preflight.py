@@ -7,7 +7,7 @@ REQUIRED = [
     "index.html", "manifest.json", "service-worker.js", "version.json",
     "firebase-config.js", "database.rules.json", "firebase.json",
     "css/aa-v2.css",
-    "js/aa-core.js", "js/aa-alerts.js", "js/aa-firebase.js",
+    "js/aa-core.js", "js/aa-alerts.js", "js/aa-carnet.js", "js/aa-export.js", "js/aa-firebase.js",
     "js/aa-cars.js", "js/aa-push.js", "js/aa-notifications.js", "js/aa-ui.js", "js/aa-icons.js",
     "icon.svg", "icon-192.png", "icon-512.png",
 ]

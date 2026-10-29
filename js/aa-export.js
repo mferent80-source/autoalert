@@ -52,8 +52,8 @@
         return (car.history[b].createdAt || 0) - (car.history[a].createdAt || 0);
       }).slice(0, 5).map(function (hid) {
         const h = car.history[hid];
-        const meta = AA.SERVICE_TYPES[h.type] || { label: h.type };
-        return '<li>' + AA.formatDate(h.doneDate) + ' — ' + AA.escapeHtml(meta.label) +
+        const label = AA.carnet ? AA.carnet.historyLabel(h) : ((AA.SERVICE_TYPES[h.type] || {}).label || h.type);
+        return '<li>' + AA.formatDate(h.doneDate) + ' — ' + AA.escapeHtml(label) +
           (h.doneKm != null ? ' · ' + AA.formatKm(h.doneKm) : '') + '</li>';
       }).join('');
 

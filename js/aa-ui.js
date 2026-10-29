@@ -21,6 +21,12 @@
       else if (st === 'urgent') c.urgent++;
       else if (st === 'warning') c.warning++;
     });
+    AA.tireItemsOf(car).forEach(function (t) {
+      const st = t.st.status;
+      if (st === 'expired') c.expired++;
+      else if (st === 'urgent') c.urgent++;
+      else if (st === 'warning') c.warning++;
+    });
     c.total = c.expired + c.urgent + c.warning;
     return c;
   };
@@ -124,6 +130,11 @@
         const info = AA.ui._svcInfo(svc, car);
         items.push({ carId: carId, sid: sid, car: car, svc: svc, info: info });
       });
+      AA.tireItemsOf(car).forEach(function (t) {
+        if (t.st.status === 'ok') return;
+        items.push({ carId: carId, sid: 'tire:' + t.tid, tid: t.tid, car: car,
+          svc: { type: AA.ui._tireIcon(t.tire.season) }, info: AA.ui._tireInfo(t) });
+      });
     });
     items.sort(function (a, b) {
       const ra = AA.STATUS_RANK[a.info.status] ?? 3;
@@ -134,6 +145,29 @@
       return pa - pb;
     });
     return items;
+  };
+
+  AA.ui._tireIcon = function (season) {
+    return season === 'iarna' ? 'roata_iarna' : (season === 'vara' ? 'roata_vara' : 'wheel');
+  };
+
+  // Un set de anvelope citit ca un termen: profilul jos bate vârsta.
+  AA.ui._tireInfo = function (t) {
+    const s = t.st;
+    const season = AA.TIRE_SEASONS[t.tire.season] || AA.TIRE_SEASONS.vara;
+    const mm = t.tire.treadMm;
+    const lowMm = mm != null && mm !== '' && Number(mm) < season.minMm;
+    return {
+      status: s.status, label: s.label, pct: null, other: '',
+      text: lowMm ? 'profil ' + AA.fmt1(mm) + ' mm' : (s.ageYears != null ? 'au ' + AA.fmt1(s.ageYears) + ' ani' : s.text),
+      sub: s.hint || (t.tire.dot ? 'DOT ' + t.tire.dot : ''),
+      num: lowMm ? AA.fmt1(mm) : AA.fmt1(s.ageYears || 0),
+      unit: lowMm ? 'mm profil rămas' : 'ani de la fabricație'
+    };
+  };
+
+  AA.ui._lei = function (n) {
+    return AA.fmt1(n) + ' lei';
   };
 
   AA.ui._plate = function (plate, size) {
@@ -224,7 +258,7 @@
       '<span class="cluster-unit">' + AA.escapeHtml(i.unit) + '<br>' + AA.escapeHtml(i.sub) + '</span></div>' +
       '<div class="cluster-car">' + AA.ui._plate(top.car.plate) + '<span>' + AA.ui._carName(top.car) + '</span></div>' +
       '<div class="cluster-actions">' +
-      '<button class="btn btn-done" data-quick-done="' + top.carId + '" data-sid="' + top.sid + '">' + AA.ui._svcIcon('check', 18) + ' Făcut</button>' +
+      (top.tid ? '' : '<button class="btn btn-done" data-quick-done="' + top.carId + '" data-sid="' + top.sid + '">' + AA.ui._svcIcon('check', 18) + ' Făcut</button>') +
       '<button class="btn" data-car="' + top.carId + '">Vezi mașina</button>' +
       '</div></section>';
   };
@@ -273,10 +307,21 @@
           services: {
             s1: { type: 'itp', mode: 'date', nextDate: AA.addDays(today, -3), warnDaysBefore: [30, 14, 7] },
             s2: { type: 'rca', mode: 'date', nextDate: AA.addDays(today, 12), warnDaysBefore: [30, 14] },
-            s3: { type: 'ulei', mode: 'mileage', lastKm: 77000, intervalKm: 10000, warnKmBefore: 1000 }
+            s3: { type: 'ulei', mode: 'mileage', lastKm: 77000, intervalKm: 10000, warnKmBefore: 1000 },
+            s6: { type: 'placute', mode: 'mileage', lastKm: 52000, intervalKm: 40000, warnKmBefore: 2000 },
+            s7: { type: 'rovigneta', mode: 'date', nextDate: AA.addDays(today, 21), intervalDays: 30, warnDaysBefore: [14, 7, 3] }
+          },
+          tires: {
+            t1: { season: 'vara', brand: 'MICHELIN', size: '195/65 R15', dot: '1222', treadMm: 5.5, location: 'pe mașină', mounted: true },
+            t2: { season: 'iarna', brand: 'NOKIAN', size: '195/65 R15', dot: '2318', treadMm: 6, location: 'Hotel anvelope Vulcan', mounted: false }
           },
           history: {
-            h1: { type: 'ulei', doneDate: AA.addMonths(today, -8), doneKm: 77000, cost: 280, createdAt: Date.now() }
+            h1: { type: 'ulei', doneDate: AA.addMonths(today, -8), doneKm: 77000, cost: 280, createdAt: Date.now() - 3 },
+            h2: { type: 'interventie', kind: 'interventie', doneDate: AA.addMonths(today, -8), doneKm: 77000, cost: 1250, shop: 'Service Auto Ion',
+              ops: { ulei: true, filtru_ulei: true, filtru_aer: true, filtru_polen: true, bujii: true }, notes: 'Următoarea revizie la 87.000', createdAt: Date.now() - 2 },
+            h3: { type: 'rca', doneDate: AA.addMonths(today, -11), doneKm: 74000, cost: 1180, notes: 'Allianz', createdAt: Date.now() - 4 },
+            h4: { type: 'anvelope', doneDate: AA.addMonths(today, -6), doneKm: 79500, cost: 160, notes: 'Montat setul vară (MICHELIN 195/65 R15)', createdAt: Date.now() - 1 },
+            h5: { type: 'itp', doneDate: AA.addMonths(today, -24), doneKm: 61000, cost: 160, createdAt: Date.now() - 5 }
           }
         },
         [car2]: {
@@ -642,6 +687,9 @@
       if (svc.reminderAt && AA.isReminderActive(svc.reminderAt)) {
         extras.push('<span class="chip" title="Reminder personalizat">⏰ ' + AA.escapeHtml(AA.formatReminderDisplay(svc.reminderAt)) + '</span>');
       }
+      if (svc.intervalDays > 0 || svc.intervalMonths > 0) {
+        extras.push('<span class="chip">se reînnoiește la ' + AA.escapeHtml(AA.carnet.validityLabel(AA.carnet.validityOf(svc, car))) + '</span>');
+      }
       if (svc.notes) extras.push('<span class="chip">' + AA.escapeHtml(svc.notes) + '</span>');
       const gauge = i.pct == null ? '' :
         '<div class="gauge" aria-hidden="true"><i style="width:' + Math.max(2, Math.round(i.pct)) + '%"></i></div>';
@@ -660,17 +708,76 @@
         '</div></div>';
     }).join('');
 
-    const history = Object.keys(car.history || {}).sort(function (a, b) {
-      return (car.history[b].createdAt || 0) - (car.history[a].createdAt || 0);
-    }).slice(0, 8).map(function (hid) {
-      const h = car.history[hid];
-      const meta = AA.SERVICE_TYPES[h.type] || { label: h.type };
-      const right = [];
-      if (h.doneKm != null) right.push(AA.formatKm(h.doneKm));
-      if (h.cost) right.push(Number(h.cost).toLocaleString('ro-RO') + ' lei');
-      return '<div class="hist"><time>' + AA.formatDate(h.doneDate) + '</time>' +
-        '<span>' + AA.escapeHtml(meta.label) + '</span><span>' + right.join(' · ') + '</span></div>';
+    const tireIds = Object.keys(car.tires || {}).sort(function (a, b) {
+      const ta = car.tires[a], tb = car.tires[b];
+      if (!!tb.mounted !== !!ta.mounted) return tb.mounted ? 1 : -1;
+      return String(ta.season).localeCompare(String(tb.season));
+    });
+    const tires = tireIds.map(function (tid) {
+      const t = car.tires[tid];
+      const s = AA.carnet.tireStatus(t);
+      const season = AA.TIRE_SEASONS[t.season] || AA.TIRE_SEASONS.vara;
+      const name = [season.short, t.brand, t.size].filter(Boolean).join(' · ');
+      const extras = [];
+      if (t.mounted) extras.push('<span class="chip chip-on">montat acum</span>');
+      if (t.location) extras.push('<span class="chip">stă: ' + AA.escapeHtml(t.location) + '</span>');
+      if (t.notes) extras.push('<span class="chip">' + AA.escapeHtml(t.notes) + '</span>');
+      return '<div class="svc st-' + s.status + '" data-tire="' + tid + '">' +
+        '<div class="svc-head">' + AA.ui._svcIcon(AA.ui._tireIcon(t.season), 22) +
+        '<div class="svc-name">' + AA.escapeHtml(name) + '</div>' +
+        (s.status !== 'ok' ? '<span class="lamp">' + AA.STATUS_LABELS[s.status] + '</span>' : '') +
+        '</div>' +
+        '<div class="svc-read"><b>' + AA.escapeHtml(s.text) + '</b><span>' + AA.escapeHtml(s.hint) + '</span></div>' +
+        (extras.length ? '<div class="svc-extra">' + extras.join('') + '</div>' : '') +
+        '<div class="svc-actions">' +
+        (t.mounted ? '' : '<button class="btn btn-sm btn-done" data-mount="' + tid + '">' + AA.ui._svcIcon('check', 16) + ' Am montat</button>') +
+        '<button class="btn btn-sm" data-edit-tire="' + tid + '">Editează</button>' +
+        '<button class="btn btn-sm btn-trash" data-del-tire="' + tid + '" title="Șterge setul" aria-label="Șterge setul ' + AA.escapeHtml(name) + '">' + AA.ui._trashIcon() + '</button>' +
+        '</div></div>';
     }).join('');
+
+    // Carnetul întreg, pe ani, cel mai nou sus. Fiecare rând se deschide pentru corectare.
+    const hist = car.history || {};
+    const hids = Object.keys(hist).sort(function (a, b) {
+      const da = String(hist[a].doneDate || ''), db = String(hist[b].doneDate || '');
+      if (da !== db) return db.localeCompare(da);
+      return (hist[b].createdAt || 0) - (hist[a].createdAt || 0);
+    });
+    let lastYear = null;
+    let history = '';
+    hids.forEach(function (hid) {
+      const h = hist[hid];
+      const y = String(h.doneDate || '').slice(0, 4) || '—';
+      if (y !== lastYear) {
+        let tot = 0;
+        hids.forEach(function (k) { if (String(hist[k].doneDate || '').slice(0, 4) === y) tot += Number(hist[k].cost) || 0; });
+        history += '<div class="hist-year"><span>' + AA.escapeHtml(y) + '</span><span>' + (tot ? AA.ui._lei(tot) : '') + '</span></div>';
+        lastYear = y;
+      }
+      const right = [];
+      if (h.doneKm) right.push(AA.formatKm(h.doneKm));
+      if (h.cost) right.push(AA.ui._lei(h.cost));
+      const smalls = [];
+      if (h.shop) smalls.push(h.shop);
+      if (h.notes) smalls.push(h.notes);
+      history += '<button type="button" class="hist hist-btn" data-hist="' + hid + '">' +
+        '<time>' + AA.formatDate(h.doneDate) + '</time>' +
+        '<span class="hist-what">' + AA.escapeHtml(AA.carnet.historyLabel(h)) +
+        (smalls.length ? '<small>' + AA.escapeHtml(smalls.join(' · ')) + '</small>' : '') + '</span>' +
+        '<span>' + right.join('<br>') + '</span></button>';
+    });
+
+    const cs = AA.carnet.costSummary(car);
+    const yNow = Number(AA.todayStr().slice(0, 4));
+    const costs = cs.total > 0 ?
+      '<div class="costs">' +
+      '<div><b>' + AA.ui._lei(cs.thisYear) + '</b><span>cheltuit în ' + yNow + '</span></div>' +
+      (cs.lastYear ? '<div><b>' + AA.ui._lei(cs.lastYear) + '</b><span>în ' + (yNow - 1) + '</span></div>' : '') +
+      (cs.per100km != null ? '<div><b>' + AA.ui._lei(cs.per100km) + '</b><span>la 100 km, din ' + AA.formatKm(cs.kmSpan) + '</span></div>' : '') +
+      '</div>' +
+      '<p class="cost-cats">De la început: acte și taxe ' + AA.ui._lei(cs.byCat.documente) +
+      ', întreținere ' + AA.ui._lei(cs.byCat.intretinere) + ', anvelope ' + AA.ui._lei(cs.byCat.anvelope) + '</p>'
+      : '';
 
     return '<div class="narrow">' +
       '<div class="topbar">' +
@@ -688,7 +795,13 @@
       '<h2 class="sec">Termene <button class="btn btn-sm" id="btnAddService">+ Adaugă</button></h2>' +
       (services ? '<div class="rows">' + services + '</div>' :
         '<div class="empty"><strong>Niciun termen</strong>Adaugă ITP, RCA, rovinieta sau schimbul de ulei.</div>') +
-      (history ? '<h2 class="sec">Ce s-a făcut</h2><div class="rows">' + history + '</div>' : '') +
+      '<h2 class="sec">Anvelope <button class="btn btn-sm" id="btnAddTire">+ Set</button></h2>' +
+      (tires ? '<div class="rows">' + tires + '</div>' :
+        '<p class="note">Notează seturile de vară și de iarnă. Din DOT aflăm vârsta, din profil cât mai țin.</p>') +
+      '<h2 class="sec">Carnet de service <button class="btn btn-sm" id="btnAddIntervention">+ Intervenție</button></h2>' +
+      costs +
+      (history ? '<div class="rows">' + history + '</div>' :
+        '<p class="note">Nimic notat încă. După service apasă „+ Intervenție” și bifează ce s-a schimbat.</p>') +
       '<div class="danger-zone"><button class="btn btn-danger-text" id="btnDelCar">Șterge mașina</button></div>' +
       '</div>';
   };
@@ -801,6 +914,7 @@
           '<label class="lbl">Ultima dată</label><input class="input" id="mLastDate" type="date" value="' + (s.lastDate || AA.todayStr()) + '">' +
           '<label class="lbl">Următoarea dată</label><input class="input" id="mNextDate" type="date" value="' + (s.nextDate || '') + '">'
         ) : '') +
+        (showDate && !meta.suggestMonth ? AA.ui._validSelect('mValid', typeKey, AA.carnet.validityOf(s, AA.ui._selCar())) : '') +
         (showKm ? (
           '<div class="modal-section">Termen (km)</div>' +
           '<label class="lbl">Ultimul km</label><input class="input mono" id="mLastKm" type="number" min="0" value="' + (s.lastKm != null ? s.lastKm : 0) + '">' +
@@ -822,13 +936,95 @@
     if (m.type === 'mark-done') {
       const s = m.data || {};
       const meta = AA.SERVICE_TYPES[s.type] || { label: s.type };
-      const gst = AA.ui.getState();
-      const car = gst.cars && _selectedCarId ? gst.cars[_selectedCarId] : null;
+      const car = AA.ui._selCar();
+      const today = AA.todayStr();
+      const mode = s.mode || meta.mode || 'date';
+      const hasDate = mode === 'date' || mode === 'both';
+      const valid = AA.carnet.validityOf(s, car);
+      const next = hasDate ? (AA.carnet.nextDueDate(s, today, car, valid) || '') : '';
       return '<div class="modal-overlay" id="modalOverlay"><div class="modal">' +
         '<h3>Marchează făcut: ' + AA.escapeHtml(meta.label) + '</h3>' +
-        '<label class="lbl">Data</label><input class="input" id="mDoneDate" type="date" value="' + AA.todayStr() + '">' +
-        '<label class="lbl">Km la intervenție</label><input class="input mono" id="mDoneKm" type="number" value="' + (car ? car.currentKm : 0) + '">' +
-        '<label class="lbl">Cost (RON, opțional)</label><input class="input mono" id="mDoneCost" type="number" min="0" placeholder="0">' +
+        '<div class="grid2">' +
+        '<div><label class="lbl" for="mDoneDate">Data</label><input class="input" id="mDoneDate" type="date" value="' + today + '"></div>' +
+        '<div><label class="lbl" for="mDoneKm">Km la intervenție</label><input class="input mono" id="mDoneKm" type="number" inputmode="numeric" value="' + (car ? car.currentKm : 0) + '"></div>' +
+        '</div>' +
+        (valid ? AA.ui._validSelect('mDoneValid', s.type, valid) : '') +
+        (hasDate ? '<label class="lbl" for="mDoneNext">Următorul termen</label><input class="input" id="mDoneNext" type="date" value="' + next + '">' : '') +
+        '<label class="lbl" for="mDoneCost">Cost (lei, opțional)</label><input class="input mono" id="mDoneCost" type="number" inputmode="decimal" min="0" placeholder="0">' +
+        '<label class="lbl" for="mDoneNotes">Notă (opțional)</label><input class="input" id="mDoneNotes" maxlength="500" placeholder="ex. asigurător, atelier, ce ulei">' +
+        '<div class="modal-actions">' +
+        '<button class="btn btn-ghost" id="modalCancel">Anulează</button>' +
+        '<button class="btn btn-primary" id="modalSave">Confirmă</button></div></div></div>';
+    }
+    if (m.type === 'intervention') {
+      const h = m.data || {};
+      const car = AA.ui._selCar();
+      const isNew = !m.hid;
+      const isInterv = isNew || h.type === 'interventie';
+      const ops = h.ops || {};
+      const groups = isInterv ? AA.OPERATIONS.map(function (g) {
+        return '<fieldset class="ops"><legend>' + AA.escapeHtml(g.group) + '</legend><div class="ops-grid">' +
+          g.items.map(function (it) {
+            return '<label class="op"><input type="checkbox" data-op="' + it[0] + '"' + (ops[it[0]] ? ' checked' : '') + '><span>' + AA.escapeHtml(it[1]) + '</span></label>';
+          }).join('') + '</div></fieldset>';
+      }).join('') : '';
+      return '<div class="modal-overlay" id="modalOverlay"><div class="modal modal-lg">' +
+        '<h3>' + (isNew ? 'Intervenție nouă' : AA.escapeHtml(isInterv ? 'Intervenție' : AA.carnet.historyLabel(h))) + '</h3>' +
+        (isNew ? '' : '<p class="muted modal-hint">Corectezi doar ce scrie în carnet. Termenele rămân cum sunt.</p>') +
+        '<div class="grid2">' +
+        '<div><label class="lbl" for="mIvDate">Data</label><input class="input" id="mIvDate" type="date" value="' + AA.escapeHtml(h.doneDate || AA.todayStr()) + '"></div>' +
+        '<div><label class="lbl" for="mIvKm">Km</label><input class="input mono" id="mIvKm" type="number" inputmode="numeric" min="0" value="' + (h.doneKm != null ? h.doneKm : (isNew && car ? car.currentKm : '')) + '"></div>' +
+        '</div>' +
+        '<div class="grid2">' +
+        '<div><label class="lbl" for="mIvCost">Cost (lei)</label><input class="input mono" id="mIvCost" type="number" inputmode="decimal" min="0" placeholder="0" value="' + (h.cost ? h.cost : '') + '"></div>' +
+        (isInterv ? '<div><label class="lbl" for="mIvShop">Atelier</label><input class="input" id="mIvShop" maxlength="80" placeholder="unde ai fost" value="' + AA.escapeHtml(h.shop || '') + '"></div>' : '<div></div>') +
+        '</div>' +
+        (isInterv ? '<div class="modal-section">Ce s-a făcut</div>' + groups +
+          '<label class="lbl" for="mIvOther">Altceva</label><input class="input" id="mIvOther" maxlength="200" placeholder="ex. reparat climă, schimbat oglindă" value="' + AA.escapeHtml(h.other || '') + '">' +
+          (isNew ? '<p class="modal-hint resets" id="ivResets" aria-live="polite"></p>' : '') : '') +
+        '<label class="lbl" for="mIvNotes">Notă</label><input class="input" id="mIvNotes" maxlength="500" placeholder="ex. ce ulei, următoarea vizită" value="' + AA.escapeHtml(h.notes || '') + '">' +
+        '<div class="modal-actions">' +
+        (isNew ? '' : '<button class="btn btn-danger" id="modalDelete">Șterge</button>') +
+        '<button class="btn btn-ghost" id="modalCancel">Anulează</button>' +
+        '<button class="btn btn-primary" id="modalSave">Salvează</button></div></div></div>';
+    }
+    if (m.type === 'tire') {
+      const t = m.data || {};
+      const seasons = Object.keys(AA.TIRE_SEASONS).map(function (k) {
+        return '<option value="' + k + '"' + ((t.season || 'vara') === k ? ' selected' : '') + '>' + AA.TIRE_SEASONS[k].short + '</option>';
+      }).join('');
+      return '<div class="modal-overlay" id="modalOverlay"><div class="modal">' +
+        '<h3>' + (m.tid ? 'Setul de anvelope' : 'Set nou de anvelope') + '</h3>' +
+        '<label class="lbl" for="mTSeason">Sezon</label><select class="input" id="mTSeason">' + seasons + '</select>' +
+        '<div class="grid2">' +
+        '<div><label class="lbl" for="mTBrand">Marcă</label><input class="input input-upper" id="mTBrand" maxlength="60" autocapitalize="characters" placeholder="ex. MICHELIN" value="' + AA.escapeHtml(t.brand || '') + '"></div>' +
+        '<div><label class="lbl" for="mTSize">Dimensiune</label><input class="input mono input-upper" id="mTSize" maxlength="30" placeholder="205/55 R16" value="' + AA.escapeHtml(t.size || '') + '"></div>' +
+        '</div>' +
+        '<div class="grid2">' +
+        '<div><label class="lbl" for="mTDot">DOT</label><input class="input mono" id="mTDot" inputmode="numeric" maxlength="4" placeholder="ex. 2318" value="' + AA.escapeHtml(t.dot || '') + '"></div>' +
+        '<div><label class="lbl" for="mTMm">Profil (mm)</label><input class="input mono" id="mTMm" inputmode="decimal" placeholder="ex. 6,5" value="' + (t.treadMm != null ? AA.fmt1(t.treadMm) : '') + '"></div>' +
+        '</div>' +
+        '<p class="muted modal-hint">DOT: ultimele 4 cifre de pe flanc, săptămâna și anul (2318 = săptămâna 23 din 2018).</p>' +
+        '<label class="lbl" for="mTLoc">Unde stau</label><input class="input" id="mTLoc" maxlength="80" placeholder="pe mașină, acasă, hotel anvelope" value="' + AA.escapeHtml(t.location || '') + '">' +
+        '<label class="chk-row"><input type="checkbox" id="mTMounted"' + (t.mounted ? ' checked' : '') + '> Sunt montate acum</label>' +
+        '<label class="lbl" for="mTNotes">Notă</label><input class="input" id="mTNotes" maxlength="200" value="' + AA.escapeHtml(t.notes || '') + '">' +
+        '<div class="modal-actions">' +
+        (m.tid ? '<button class="btn btn-danger" id="modalDelete">Șterge</button>' : '') +
+        '<button class="btn btn-ghost" id="modalCancel">Anulează</button>' +
+        '<button class="btn btn-primary" id="modalSave">Salvează</button></div></div></div>';
+    }
+    if (m.type === 'mount-tire') {
+      const t = m.data || {};
+      const car = AA.ui._selCar();
+      const season = AA.TIRE_SEASONS[t.season] || AA.TIRE_SEASONS.vara;
+      return '<div class="modal-overlay" id="modalOverlay"><div class="modal">' +
+        '<h3>Am montat: ' + AA.escapeHtml([season.short, t.brand].filter(Boolean).join(' ')) + '</h3>' +
+        '<p class="muted modal-hint">Celelalte seturi trec la „demontate”, iar termenul de schimb al sezonului se bifează.</p>' +
+        '<div class="grid2">' +
+        '<div><label class="lbl" for="mMtDate">Data</label><input class="input" id="mMtDate" type="date" value="' + AA.todayStr() + '"></div>' +
+        '<div><label class="lbl" for="mMtKm">Km</label><input class="input mono" id="mMtKm" type="number" inputmode="numeric" value="' + (car ? car.currentKm : 0) + '"></div>' +
+        '</div>' +
+        '<label class="lbl" for="mMtCost">Cost (lei, opțional)</label><input class="input mono" id="mMtCost" type="number" inputmode="decimal" min="0" placeholder="0">' +
         '<div class="modal-actions">' +
         '<button class="btn btn-ghost" id="modalCancel">Anulează</button>' +
         '<button class="btn btn-primary" id="modalSave">Confirmă</button></div></div></div>';
@@ -842,17 +1038,44 @@
           existing[pickCar.services[sid].type] = true;
         });
       }
-      const opts = Object.keys(AA.SERVICE_TYPES).map(function (k) {
+      const btn = function (k) {
         const t = AA.SERVICE_TYPES[k];
         const has = existing[k];
         return '<button type="button" class="pick-btn' + (has ? ' pick-btn-has' : '') + '" data-svc-type="' + k + '">' +
           AA.ui._svcIcon(k, 22) + '<span>' + t.label + (has ? ' <em class="pick-tag">deja adăugat</em>' : '') + '</span></button>';
+      };
+      const groups = AA.ui.PICK_GROUPS.map(function (g, gi) {
+        const keys = g[1].filter(function (k) { return AA.SERVICE_TYPES[k]; });
+        if (gi === AA.ui.PICK_GROUPS.length - 1) {
+          Object.keys(AA.SERVICE_TYPES).forEach(function (k) {
+            if (!AA.ui.PICK_GROUPS.some(function (x) { return x[1].indexOf(k) >= 0; })) keys.push(k);
+          });
+        }
+        return '<div class="pick-group">' + g[0] + '</div><div class="pick-grid">' + keys.map(btn).join('') + '</div>';
       }).join('');
       return '<div class="modal-overlay" id="modalOverlay"><div class="modal modal-lg">' +
-        '<h3>Ce termen adaugi?</h3><div class="pick-grid" id="pickServiceGrid">' + opts + '</div>' +
+        '<h3>Ce termen adaugi?</h3><div id="pickServiceGrid">' + groups + '</div>' +
         '<button class="btn btn-ghost" id="modalCancel">Anulează</button></div></div>';
     }
     return '';
+  };
+
+  AA.ui.PICK_GROUPS = [
+    ['Acte și taxe', ['itp', 'rca', 'casco', 'rovigneta', 'taxa_pod', 'impozit', 'permis']],
+    ['Întreținere', ['revizie', 'ulei', 'filtre', 'distributie', 'placute', 'lichid_frana', 'antigel', 'baterie', 'ac']],
+    ['Sezon și siguranță', ['roata_iarna', 'roata_vara', 'trusa', 'extinctor']]
+  ];
+
+  AA.ui._selCar = function () {
+    const gst = AA.ui.getState();
+    return gst.cars && _selectedCarId ? gst.cars[_selectedCarId] : null;
+  };
+
+  AA.ui._validSelect = function (id, type, current) {
+    const opts = AA.carnet.validityOptions(type, current).map(function (o) {
+      return '<option value="' + o.value + '"' + (o.value === current ? ' selected' : '') + '>' + AA.escapeHtml(o.label) + '</option>';
+    }).join('');
+    return '<label class="lbl" for="' + id + '">Valabil</label><select class="input" id="' + id + '">' + opts + '</select>';
   };
 
   AA.ui.openModal = function (type, data, edit, opts) {
@@ -1022,6 +1245,15 @@
     };
   };
 
+  // null = omul a renunțat; true = a confirmat corectarea în jos; false = km mai mari, nimic de întrebat.
+  AA.ui._confirmLowerKm = function (car, val) {
+    const cur = car ? Number(car.currentKm) || 0 : 0;
+    const r = AA.carnet.resolveKm(cur, val, false);
+    if (!r.needsConfirm) return false;
+    return confirm('Scrii ' + r.km.toLocaleString('ro-RO') + ' km, mai puțin decât cei salvați (' +
+      cur.toLocaleString('ro-RO') + ' km). Corectezi o greșeală?') ? true : null;
+  };
+
   AA.ui._bindCarDetail = function (st) {
     const back = document.querySelector('[data-back]');
     if (back) back.onclick = function () { AA.ui.goBack('cars'); };
@@ -1029,7 +1261,10 @@
     const saveKm = document.getElementById('btnSaveKm');
     if (saveKm) saveKm.onclick = async function () {
       try {
-        const v = await AA.cars.updateKm(_selectedCarId, document.getElementById('kmInput').value);
+        const val = document.getElementById('kmInput').value;
+        const allow = AA.ui._confirmLowerKm(st.cars[_selectedCarId], val);
+        if (allow == null) return;
+        const v = await AA.cars.updateKm(_selectedCarId, val, allow);
         AA.showToast('Km actualizat: ' + v.toLocaleString('ro-RO'), 'success');
       } catch (e) { AA.showToast(e.message, 'error'); }
     };
@@ -1083,13 +1318,43 @@
         AA.showToast((AA.fb._rtdbErr ? AA.fb._rtdbErr(e) : e.message), 'error');
       }
     };
+
+    const car = st.cars[_selectedCarId];
+    const addTire = document.getElementById('btnAddTire');
+    if (addTire) addTire.onclick = function () {
+      const hasMounted = Object.keys(car.tires || {}).some(function (k) { return car.tires[k].mounted; });
+      AA.ui.openModal('tire', { season: 'vara', mounted: !hasMounted });
+    };
+    document.querySelectorAll('[data-edit-tire]').forEach(function (b) {
+      b.onclick = function () { AA.ui.openModal('tire', car.tires[b.dataset.editTire], true, { tid: b.dataset.editTire }); };
+    });
+    document.querySelectorAll('[data-mount]').forEach(function (b) {
+      b.onclick = function () { AA.ui.openModal('mount-tire', car.tires[b.dataset.mount], true, { tid: b.dataset.mount }); };
+    });
+    document.querySelectorAll('[data-del-tire]').forEach(function (b) {
+      b.onclick = async function () {
+        if (!confirm('Ștergi setul de anvelope?')) return;
+        try {
+          await AA.cars.removeTire(_selectedCarId, b.dataset.delTire);
+          AA.showToast('Set șters', 'info');
+        } catch (e) { AA.showToast(e.message, 'error'); }
+      };
+    });
+    const addIv = document.getElementById('btnAddIntervention');
+    if (addIv) addIv.onclick = function () { AA.ui.openModal('intervention', {}); };
+    document.querySelectorAll('[data-hist]').forEach(function (b) {
+      b.onclick = function () { AA.ui.openModal('intervention', car.history[b.dataset.hist], true, { hid: b.dataset.hist }); };
+    });
   };
 
   AA.ui._bindFamily = function (st) {
     const copy = document.getElementById('btnCopyCode');
     if (copy) copy.onclick = function () {
-      navigator.clipboard.writeText(st.family.inviteCode);
-      AA.showToast('Cod copiat', 'success');
+      navigator.clipboard.writeText(st.family.inviteCode).then(function () {
+        AA.showToast('Cod copiat', 'success');
+      }, function () {
+        AA.showToast('Nu am putut copia. Codul: ' + st.family.inviteCode, 'info');
+      });
     };
     const regen = document.getElementById('btnRegenCode');
     if (regen) regen.onclick = async function () {
@@ -1185,8 +1450,64 @@
       }
     };
 
+    // „Făcut”: data sau Valabil schimbă termenul următor
+    const doneDate = document.getElementById('mDoneDate');
+    const doneValid = document.getElementById('mDoneValid');
+    const doneNext = document.getElementById('mDoneNext');
+    if (doneNext && doneDate) {
+      const recalc = function () {
+        const nd = AA.carnet.nextDueDate(_modal.data || {}, doneDate.value || AA.todayStr(), AA.ui._selCar(), doneValid ? doneValid.value : '');
+        if (nd) doneNext.value = nd;
+      };
+      doneDate.onchange = recalc;
+      if (doneValid) doneValid.onchange = recalc;
+    }
+
+    // Editare termen: Valabil schimbat ⇒ următoarea dată din ultima dată
+    const svcValid = document.getElementById('mValid');
+    if (svcValid) svcValid.onchange = function () {
+      const ld = document.getElementById('mLastDate');
+      const nd = document.getElementById('mNextDate');
+      const next = ld && ld.value ? AA.carnet.nextDueDate(_modal.data || {}, ld.value, AA.ui._selCar(), svcValid.value) : null;
+      if (nd && next) nd.value = next;
+    };
+
+    // Intervenția nouă: spune dinainte ce termene se actualizează
+    const resetsEl = document.getElementById('ivResets');
+    if (resetsEl) {
+      const showResets = function () {
+        try {
+          const plan = AA.carnet.planIntervention(AA.ui._selCar() || {}, AA.ui._readIntervention());
+          const parts = [];
+          if (plan.resets.length) parts.push('Se actualizează și termenele: ' + plan.resets.join(', ') + '.');
+          if (plan.skipped.length) parts.push('Rămân cum sunt, au deja o dată mai nouă: ' + plan.skipped.join(', ') + '.');
+          resetsEl.textContent = parts.join(' ');
+        } catch (_) { resetsEl.textContent = ''; }
+      };
+      document.querySelectorAll('[data-op]').forEach(function (c) { c.onchange = showResets; });
+      ['mIvDate', 'mIvKm'].forEach(function (id) { const el = document.getElementById(id); if (el) el.onchange = showResets; });
+      showResets();
+    }
+    AA.ui._bindUpperInput('mTBrand', AA.formatCarField);
+
+    if (_modal.type === 'intervention' || _modal.type === 'tire') {
+      const del = document.getElementById('modalDelete');
+      if (del) del.onclick = async function () {
+        const isTire = _modal.type === 'tire';
+        if (!confirm(isTire ? 'Ștergi setul de anvelope?' :
+          'Ștergi intrarea din carnet? Termenele rămân cum sunt; dacă le-a schimbat greșit, corectează-le din „Editează”.')) return;
+        try {
+          if (st.demo) { AA.showToast('Mod demo — doar vizualizare', 'info'); return; }
+          if (isTire) await AA.cars.removeTire(_selectedCarId, _modal.tid);
+          else await AA.cars.removeHistory(_selectedCarId, _modal.hid);
+          AA.showToast(isTire ? 'Set șters' : 'Intrare ștearsă', 'info');
+          AA.ui.closeModal();
+        } catch (e) { AA.showToast(e.message, 'error'); }
+      };
+    }
+
     const delBtn = document.getElementById('modalDelete');
-    if (delBtn) delBtn.onclick = async function () {
+    if (delBtn && _modal.type === 'service') delBtn.onclick = async function () {
       if (!_modal.sid || !confirm('Ștergi acest serviciu?')) return;
       try {
         await AA.cars.removeService(_selectedCarId, _modal.sid);
@@ -1205,6 +1526,7 @@
     if (!save) return;
     save.onclick = async function () {
       try {
+        if (st.demo) { AA.showToast('Mod demo — doar vizualizare', 'info'); AA.ui.closeModal(); return; }
         if (_modal.type === 'car') {
           const payload = {
             plate: document.getElementById('mPlate').value,
@@ -1214,8 +1536,11 @@
             currentKm: document.getElementById('mKm').value
           };
           if (_modal.edit && _modal.carId) {
+            const hasKm = String(payload.currentKm).trim() !== '';
+            const allow = hasKm ? AA.ui._confirmLowerKm(st.cars[_modal.carId], payload.currentKm) : false;
+            if (allow == null) return;
             await AA.cars.update(_modal.carId, payload);
-            if (payload.currentKm != null) await AA.cars.updateKm(_modal.carId, payload.currentKm);
+            if (hasKm) await AA.cars.updateKm(_modal.carId, payload.currentKm, allow);
             AA.showToast('Mașină actualizată', 'success');
           } else {
             await AA.cars.add(payload);
@@ -1233,6 +1558,8 @@
           if (lk) patch.lastKm = lk.value;
           if (ik) patch.intervalKm = ik.value;
           if (wk) patch.warnKmBefore = wk.value;
+          const vd = document.getElementById('mValid');
+          if (vd) Object.assign(patch, AA.carnet.validityPatchFor(_modal.data || {}, AA.ui._selCar(), vd.value));
           const remDate = document.getElementById('mRemDate');
           const remTime = document.getElementById('mRemTime');
           const remNote = document.getElementById('mRemNote');
@@ -1261,17 +1588,60 @@
           AA.showToast('Serviciu salvat', 'success');
         } else if (_modal.type === 'mark-done') {
           AA.ui.animateDone(_modal.sid);
+          const nx = document.getElementById('mDoneNext');
+          const vd = document.getElementById('mDoneValid');
           await AA.cars.markDone(_selectedCarId, _modal.sid, {
             date: document.getElementById('mDoneDate').value,
             km: document.getElementById('mDoneKm').value,
-            cost: document.getElementById('mDoneCost').value
+            cost: document.getElementById('mDoneCost').value,
+            notes: document.getElementById('mDoneNotes').value,
+            validity: vd ? vd.value : '',
+            nextDate: nx ? nx.value : ''
           });
           AA.showToast('Marcat ca făcut', 'success');
+        } else if (_modal.type === 'intervention') {
+          const data = AA.ui._readIntervention();
+          if (_modal.hid) {
+            await AA.cars.updateHistory(_selectedCarId, _modal.hid, data);
+            AA.showToast('Carnet actualizat', 'success');
+          } else {
+            const r = await AA.cars.addIntervention(_selectedCarId, data);
+            AA.showToast(r.resets.length ? 'Intervenție salvată. Actualizat: ' + r.resets.join(', ') : 'Intervenție salvată', 'success');
+          }
+        } else if (_modal.type === 'tire') {
+          await AA.cars.saveTire(_selectedCarId, _modal.tid || null, {
+            season: document.getElementById('mTSeason').value,
+            brand: document.getElementById('mTBrand').value,
+            size: document.getElementById('mTSize').value,
+            dot: document.getElementById('mTDot').value,
+            treadMm: document.getElementById('mTMm').value,
+            location: document.getElementById('mTLoc').value,
+            mounted: document.getElementById('mTMounted').checked,
+            notes: document.getElementById('mTNotes').value
+          });
+          AA.showToast('Set de anvelope salvat', 'success');
+        } else if (_modal.type === 'mount-tire') {
+          await AA.cars.mountTire(_selectedCarId, _modal.tid, {
+            date: document.getElementById('mMtDate').value,
+            km: document.getElementById('mMtKm').value,
+            cost: document.getElementById('mMtCost').value
+          });
+          AA.showToast('Set montat, notat în carnet', 'success');
         }
         AA.ui.closeModal();
       } catch (e) {
         AA.showToast((AA.fb._rtdbErr ? AA.fb._rtdbErr(e) : e.message), 'error');
       }
+    };
+  };
+
+  AA.ui._readIntervention = function () {
+    const val = function (id) { const el = document.getElementById(id); return el ? el.value : ''; };
+    const ops = {};
+    document.querySelectorAll('[data-op]').forEach(function (c) { if (c.checked) ops[c.dataset.op] = true; });
+    return {
+      date: val('mIvDate'), km: val('mIvKm'), cost: val('mIvCost'), shop: val('mIvShop'),
+      ops: ops, other: val('mIvOther'), notes: val('mIvNotes')
     };
   };
 
@@ -1291,7 +1661,7 @@
     });
     const saveKm = document.getElementById('btnSaveKm');
     if (saveKm) saveKm.onclick = function () { AA.showToast('Mod demo — doar vizualizare', 'info'); };
-    document.querySelectorAll('[data-del-svc],#btnEditCar,#btnDelCar').forEach(function (b) {
+    document.querySelectorAll('[data-del-svc],#btnEditCar,#btnDelCar,#btnAddTire,[data-edit-tire],[data-mount],[data-del-tire],#btnAddIntervention,[data-hist]').forEach(function (b) {
       b.onclick = function () { AA.showToast('Mod demo — doar vizualizare', 'info'); };
     });
   };

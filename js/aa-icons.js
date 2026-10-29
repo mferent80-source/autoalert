@@ -23,7 +23,16 @@
     home:        { bg: 'rgba(251,146,60,.18)', fg: '#fdba74' },
     car:         { bg: 'rgba(96,165,250,.18)', fg: '#93c5fd' },
     family:      { bg: 'rgba(167,139,250,.18)',fg: '#c4b5fd' },
-    wheel:       { bg: 'rgba(251,146,60,.2)',  fg: '#fb923c' }
+    wheel:       { bg: 'rgba(251,146,60,.2)',  fg: '#fb923c' },
+    placute:     { bg: 'rgba(248,113,113,.2)', fg: '#fca5a5' },
+    lichid_frana:{ bg: 'rgba(96,165,250,.2)',  fg: '#93c5fd' },
+    antigel:     { bg: 'rgba(45,212,191,.2)',  fg: '#5eead4' },
+    baterie:     { bg: 'rgba(74,222,128,.2)',  fg: '#86efac' },
+    ac:          { bg: 'rgba(56,189,248,.2)',  fg: '#7dd3fc' },
+    trusa:       { bg: 'rgba(248,113,113,.2)', fg: '#fca5a5' },
+    extinctor:   { bg: 'rgba(248,113,113,.2)', fg: '#fca5a5' },
+    impozit:     { bg: 'rgba(167,139,250,.2)', fg: '#c4b5fd' },
+    permis:      { bg: 'rgba(129,140,248,.2)', fg: '#a5b4fc' }
   };
 
   const PATHS = {
@@ -42,7 +51,16 @@
     car: '<path d="M5 11l1.5-4h11L19 11M5 11v6h2v-2h10v2h2v-6M7 17a1.5 1.5 0 103 0 1.5 1.5 0 00-3 0zm10 0a1.5 1.5 0 103 0 1.5 1.5 0 00-3 0z" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/>',
     family: '<circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.8" fill="none"/><circle cx="17" cy="10" r="2.5" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M14 20c0-2.5 1.8-4.5 4-4.5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/>',
     wheel: '<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 3v18M3 12h18" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="3" r="1.5" fill="currentColor"/><circle cx="12" cy="21" r="1.5" fill="currentColor"/><circle cx="3" cy="12" r="1.5" fill="currentColor"/><circle cx="21" cy="12" r="1.5" fill="currentColor"/>',
-    check: '<path d="M5 12l4 4L19 7" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+    check: '<path d="M5 12l4 4L19 7" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+    placute: '<circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M4.6 8.2a8.6 8.6 0 013.6-3.8" stroke="currentColor" stroke-width="3.4" fill="none" stroke-linecap="round"/>',
+    lichid_frana: '<path d="M12 3c3.5 4.5 6 7.6 6 11a6 6 0 01-12 0c0-3.4 2.5-6.5 6-11z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/>',
+    antigel: '<path d="M10 14V5a2 2 0 014 0v9a4 4 0 11-4 0z" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 9v7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+    baterie: '<rect x="3" y="7" width="18" height="12" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><path d="M7 7V5h3v2M14 7V5h3v2M6.5 13h3M15.5 11.5v3M14 13h3" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>',
+    ac: '<circle cx="12" cy="12" r="1.8" fill="currentColor"/><path d="M12 10.2C12 6 13 3.5 15.5 4.2c2 .6 1 4-3.5 6M13.8 12c4.2 0 6.7 1 6 3.5-.6 2-4 1-6-3.5M12 13.8c0 4.2-1 6.7-3.5 6-2-.6-1-4 3.5-6M10.2 12C6 12 3.5 11 4.2 8.5c.6-2 4-1 6 3.5" stroke="currentColor" stroke-width="1.6" fill="none"/>',
+    trusa: '<rect x="3" y="7" width="18" height="13" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><path d="M9 7V5h6v2M12 10.5v6M9 13.5h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>',
+    extinctor: '<path d="M9 9h6v11a1 1 0 01-1 1h-4a1 1 0 01-1-1V9z" stroke="currentColor" stroke-width="2" fill="none"/><path d="M10 9V6h4v3M14 6.5h3.5l1.5 2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+    impozit: '<path d="M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+    permis: '<rect x="2.5" y="5.5" width="19" height="13" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="8" cy="11" r="2" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M5 16c.5-1.5 1.6-2.2 3-2.2s2.5.7 3 2.2M14 10h4.5M14 13.5h3" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/>'
   };
 
   AA.icon.render = function (type, size, cls) {

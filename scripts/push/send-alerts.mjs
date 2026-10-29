@@ -1,5 +1,5 @@
 // AutoAlert — trimite alertele pe telefoane (Web Push), rulat de GitHub Actions la 30 de minute.
-// Folosește ACELAȘI motor de alerte ca aplicația (js/aa-core.js + js/aa-alerts.js).
+// Folosește ACELAȘI motor de alerte ca aplicația (js/aa-core.js + js/aa-alerts.js + js/aa-carnet.js).
 //
 // Mediu: FIREBASE_SA (JSON cont de serviciu), VAPID_PRIVATE, TZ=Europe/Bucharest, DRY_RUN=1 (doar afișează).
 import fs from 'node:fs';
@@ -18,7 +18,7 @@ const TEST = process.env.TEST_PUSH === '1'; // alertă de probă la toate telefo
 const DIGEST_FROM = 8;   // rezumatul pleacă la prima rulare după 8:00
 const DIGEST_UNTIL = 21; // după 21:00 nu mai trezim pe nimeni cu rezumatul zilei
 
-for (const f of ['js/aa-core.js', 'js/aa-alerts.js']) {
+for (const f of ['js/aa-core.js', 'js/aa-alerts.js', 'js/aa-carnet.js']) {
   vm.runInThisContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), { filename: f });
 }
 const AA = globalThis.AA;

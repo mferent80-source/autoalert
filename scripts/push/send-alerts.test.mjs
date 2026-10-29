@@ -76,3 +76,12 @@ test('reminderele mai vechi de o zi sunt ignorate', () => {
   f.cars.c1.services.s2.reminderAt = AA.addDays(today, -5) + 'T09:00';
   assert.equal(planFamily('f1', f, at(10)).msgs.length, 0);
 });
+
+test('rezumatul cuprinde profilul tocit al setului montat (motorul carnetului e încărcat)', () => {
+  const f = family();
+  delete f.cars.c1.services.s1;
+  f.cars.c1.tires = { t1: { season: 'iarna', dot: '4524', treadMm: 3, mounted: true }, t2: { season: 'vara', dot: '0115', treadMm: 1, mounted: false } };
+  const p = planFamily('f1', f, at(9));
+  assert.equal(p.msgs.length, 1);
+  assert.match(p.msgs[0].body, /Anvelope iarnă/);
+});

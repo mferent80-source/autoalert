@@ -537,6 +537,41 @@ code { font-size: 14px; background: var(--raise-2); padding: 1px 5px; border-rad
 .done-burst { position: absolute; right: 10px; top: 12px; color: var(--green); animation: sheet-in .25s ease-out; }
 .confetti { display: none; }
 
+/* ── Carnet de service, anvelope, cheltuieli (1.7.0) ── */
+.note { color: var(--ink-3); font-size: 15px; padding: 12px 2px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.chip-on { color: var(--green); background: rgba(116,197,141,.12); }
+.costs { display: flex; flex-wrap: wrap; gap: 8px 28px; padding: 6px 2px 4px; }
+.costs div { display: flex; flex-direction: column; }
+.costs b { font: 700 30px/1 var(--font-cond); }
+.costs span { font-size: 13px; color: var(--ink-3); margin-top: 4px; }
+.cost-cats { font-size: 14px; color: var(--ink-2); padding: 8px 2px 12px; }
+.hist-year { display: flex; justify-content: space-between; padding: 16px 2px 6px; font: 600 18px var(--font-cond); color: var(--ink-2); border-bottom: 1px solid var(--line); }
+.rows > .hist-year:first-child { padding-top: 10px; }
+.hist-btn { width: 100%; text-align: left; align-items: start; }
+.hist-btn:hover { background: rgba(255,255,255,.025); }
+.hist-what { min-width: 0; }
+.hist-what small { display: block; color: var(--ink-3); font-size: 13px; margin-top: 2px; overflow-wrap: anywhere; }
+.grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 10px; }
+select.input { appearance: auto; }
+.ops { border: 0; margin-top: 14px; min-width: 0; }
+.ops legend { font-size: 14px; color: var(--ink-2); margin-bottom: 6px; }
+.ops-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.op { position: relative; display: inline-flex; }
+.op input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.op span {
+  display: inline-flex; align-items: center;
+  min-height: 40px; padding: 0 13px;
+  border-radius: 999px; border: 1px solid var(--line-strong); background: var(--bg-sunk);
+  font-size: 15px; font-weight: 500; cursor: pointer; user-select: none;
+}
+.op input:checked + span { background: var(--ink); border-color: var(--ink); color: var(--bg); font-weight: 600; }
+.op input:focus-visible + span { outline: 2px solid var(--amber); outline-offset: 2px; }
+.resets { color: var(--green); min-height: 1.2em; margin-top: 10px; }
+.chk-row { display: flex; align-items: center; gap: 10px; margin-top: 16px; font-size: 15px; cursor: pointer; }
+.chk-row input { width: 20px; height: 20px; accent-color: var(--green); }
+.pick-group { font: 600 17px var(--font-cond); color: var(--ink-2); margin-top: 16px; }
+.pick-group + .pick-grid { margin-top: 8px; }
+
 /* ── Ecran lat: agenda stânga, mașinile dreapta ── */
 @media (min-width: 960px) {
   #app { max-width: 1040px; }
